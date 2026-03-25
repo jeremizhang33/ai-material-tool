@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎬 视频合成工具</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:#0f0f1a;color:#e0e0ff;min-height:100vh}
+  .header{background:linear-gradient(135deg,#1a1a3e,#2d1b69);padding:24px 40px;display:flex;align-items:center;gap:16px;border-bottom:1px solid #333}
+  .header h1{font-size:24px;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .header p{color:#999;font-size:13px;margin-top:4px}
+  .main{max-width:960px;margin:0 auto;padding:32px 24px}
+
+  .steps{display:flex;gap:8px;margin-bottom:32px}
+  .step{flex:1;text-align:center;padding:12px 8px;border-radius:12px;background:#1a1a2e;border:1px solid #2a2a4a;cursor:pointer;transition:all .2s}
+  .step.active{background:#2d1b69;border-color:#a78bfa}
+  .step .num{width:28px;height:28px;border-radius:50%;background:#333;color:#aaa;font-size:13px;display:flex;align-items:center;justify-content:center;margin:0 auto 6px}
+  .step.active .num{background:#a78bfa;color:#fff}
+  .step .label{font-size:12px;color:#aaa}
+  .step.active .label{color:#e0e0ff}
+  .step.done .num{background:#10b981;color:#fff}
+
+  .card{background:#1a1a2e;border:1px solid #2a2a4a;border-radius:16px;padding:28px;margin-bottom:20px}
+  .card h3{font-size:16px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .card h3 span{font-size:20px}
+
+  .drop-zone{border:2px dashed #3a3a6a;border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+  .drop-zone:hover,.drop-zone.dragover{border-color:#a78bfa;background:#2d1b4420}
+  .drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+  .drop-zone .icon{font-size:40px;margin-bottom:12px}
+  .drop-zone p{color:#888;font-size:14px}
+  .drop-zone p strong{color:#a78bfa}
+
+  .file-list{margin-top:16px;display:flex;flex-direction:column;gap:8px}
+  .file-item{display:flex;align-items:center;gap:12px;background:#12122a;border:1px solid #2a2a4a;border-radius:10px;padding:12px 16px}
+  .file-item .drag-handle{color:#555;cursor:grab;font-size:18px;padding:0 4px}
+  .file-item .file-icon{font-size:24px}
+  .file-item .file-info{flex:1;min-width:0}
+  .file-item .file-name{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#c0c0e0}
+  .file-item .file-size{font-size:11px;color:#666;margin-top:2px}
+  .file-item .remove-btn{background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:4px;border-radius:6px;transition:background .2s}
+  .file-item .remove-btn:hover{background:#ef444420}
+  .upload-btn{background:linear-gradient(135deg,#7c3aed,#2563eb);border:none;color:#fff;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:opacity .2s;margin-top:12px}
+  .upload-btn:hover{opacity:.85}
+  .upload-btn:disabled{opacity:.4;cursor:not-allowed}
+
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  .form-group{display:flex;flex-direction:column;gap:6px}
+  .form-group label{font-size:12px;color:#888;font-weight:500}
+  .form-group select,.form-group input[type=range],.form-group input[type=number]{background:#12122a;border:1px solid #2a2a4a;color:#e0e0ff;padding:8px 12px;border-radius:8px;font-size:13px}
+  .form-group select:focus{outline:none;border-color:#a78bfa}
+  .range-wrap{display:flex;align-items:center;gap:10px}
+  .range-wrap input{flex:1}
+  .range-val{font-size:13px;color:#a78bfa;min-width:32px;text-align:right}
+
+  .compose-btn{width:100%;padding:16px;background:linear-gradient(135deg,#7c3aed,#2563eb);border:none;color:#fff;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+  .compose-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 24px #7c3aed50}
+  .compose-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+  .progress-wrap{display:none;margin-top:20px}
+  .progress-bar{height:8px;background:#1e1e3a;border-radius:4px;overflow:hidden;margin:10px 0}
+  .progress-fill{height:100%;background:linear-gradient(90deg,#7c3aed,#2563eb);border-radius:4px;transition:width .3s;width:0%}
+  .progress-text{font-size:13px;color:#888;text-align:center}
+
+  .result-wrap{display:none;margin-top:20px}
+  .result-card{background:#0d2a1a;border:1px solid #10b981;border-radius:12px;padding:20px;text-align:center}
+  .result-card .success-icon{font-size:48px;margin-bottom:12px}
+  .result-card p{color:#10b981;font-weight:600;font-size:16px;margin-bottom:16px}
+  .download-btn{background:#10b981;border:none;color:#fff;padding:12px 32px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:8px}
+  .download-btn:hover{background:#059669;transform:translateY(-1px)}
+
+  .tip{background:#1e1e0a;border:1px solid #ca8a04;border-radius:10px;padding:12px 16px;font-size:12px;color:#fbbf24;margin-top:12px}
+  .tip strong{display:block;margin-bottom:4px}
+
+  .badge{display:inline-block;background:#7c3aed20;color:#a78bfa;font-size:11px;padding:2px 8px;border-radius:20px;border:1px solid #7c3aed40;margin-left:8px}
+
+  video{width:100%;border-radius:10px;background:#000;margin-top:12px;max-height:300px}
+
+  @media(max-width:600px){.form-row{grid-template-columns:1fr}.steps{gap:4px}.step .label{font-size:10px}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🎬 视频合成工具</h1>
+    <p>上传视频片段 → 自动合并 → 叠加Logo → 加入背景音乐 → 输出最终 MP4</p>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- 步骤指示 -->
+  <div class="steps">
+    <div class="step active" id="s1"><div class="num">1</div><div class="label">上传素材</div></div>
+    <div class="step" id="s2"><div class="num">2</div><div class="label">配置参数</div></div>
+    <div class="step" id="s3"><div class="num">3</div><div class="label">合成输出</div></div>
+  </div>
+
+  <!-- Step 1: 上传视频片段 -->
+  <div class="card">
+    <h3><span>🎥</span>视频片段 <span class="badge">必填，可多段，拖拽排序</span></h3>
+    <div class="drop-zone" id="videoDropZone">
+      <input type="file" id="videoInput" accept="video/*" multiple>
+      <div class="icon">📂</div>
+      <p>点击或拖拽添加视频片段</p>
+      <p style="font-size:12px;margin-top:6px">支持 MP4 / MOV / AVI / MKV，可多个文件，将按顺序合并</p>
+    </div>
+    <div class="file-list" id="videoList"></div>
+    <button class="upload-btn" id="uploadVideoBtn" disabled>⬆️ 上传到服务器</button>
+  </div>
+
+  <!-- Step 2: Logo 和音频 -->
+  <div class="card">
+    <h3><span>🖼️</span>Logo 水印 <span class="badge">可选</span></h3>
+    <div class="drop-zone" id="logoDropZone" style="padding:24px 20px">
+      <input type="file" id="logoInput" accept="image/*">
+      <div class="icon" style="font-size:28px">🏷️</div>
+      <p>点击上传 Logo（PNG 推荐带透明背景）</p>
+    </div>
+    <div class="file-list" id="logoList"></div>
+    <div class="form-row" style="margin-top:16px">
+      <div class="form-group">
+        <label>Logo 位置</label>
+        <select id="logoPos">
+          <option value="topright">右上角（默认）</option>
+          <option value="topleft">左上角</option>
+          <option value="bottomright">右下角</option>
+          <option value="bottomleft">左下角</option>
+          <option value="center">居中</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Logo 大小（占画面宽度比例）</label>
+        <div class="range-wrap">
+          <input type="range" id="logoScale" min="0.05" max="0.4" step="0.01" value="0.15">
+          <span class="range-val" id="logoScaleVal">15%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><span>🎵</span>背景音乐 <span class="badge">可选</span></h3>
+    <div class="drop-zone" id="audioDropZone" style="padding:24px 20px">
+      <input type="file" id="audioInput" accept="audio/*">
+      <div class="icon" style="font-size:28px">🎧</div>
+      <p>点击上传背景音乐（MP3 / WAV / AAC）</p>
+    </div>
+    <div class="file-list" id="audioList"></div>
+    <div class="form-group" style="margin-top:12px">
+      <label>背景音乐音量（原声为100%）</label>
+      <div class="range-wrap">
+        <input type="range" id="audioVolume" min="0" max="1" step="0.05" value="0.3">
+        <span class="range-val" id="audioVolumeVal">30%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: 合成 -->
+  <div class="card">
+    <h3><span>⚡</span>开始合成</h3>
+    <div class="tip">
+      <strong>⚠️ 合成前请先上传素材</strong>
+      点击上方"上传到服务器"按钮，确保所有文件上传完毕后再合成。
+    </div>
+    <button class="compose-btn" id="composeBtn" style="margin-top:16px" disabled>
+      🎬 开始合成视频
+    </button>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">正在处理...</div>
+    </div>
+
+    <div class="result-wrap" id="resultWrap">
+      <div class="result-card">
+        <div class="success-icon">🎉</div>
+        <p>视频合成成功！</p>
+        <button class="download-btn" id="downloadBtn">⬇️ 下载合成视频 (MP4)</button>
+      </div>
+      <video id="previewVideo" controls style="display:none"></video>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = '';  // 同服务器，留空即可
+
+// ── 状态 ──────────────────────────────────────────────────────────────────────
+let videoFiles = [];       // {file, uploaded, filename}
+let logoFile = null;       // {file, uploaded, filename}
+let audioFile = null;      // {file, uploaded, filename}
+
+// ── 工具函数 ──────────────────────────────────────────────────────────────────
+function formatSize(bytes) {
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+function renderVideoList() {
+  const list = document.getElementById('videoList');
+  list.innerHTML = videoFiles.map((f, i) => `
+    <div class="file-item" draggable="true" data-idx="${i}">
+      <span class="drag-handle">⠿</span>
+      <span class="file-icon">🎬</span>
+      <div class="file-info">
+        <div class="file-name">${f.file.name}</div>
+        <div class="file-size">${formatSize(f.file.size)} · ${f.uploaded ? '✅ 已上传' : '⏳ 待上传'}</div>
+      </div>
+      <button class="remove-btn" onclick="removeVideo(${i})">✕</button>
+    </div>
+  `).join('');
+  document.getElementById('uploadVideoBtn').disabled = videoFiles.length === 0;
+  bindDrag();
+}
+
+function renderSingleFile(listId, fileObj, icon) {
+  const list = document.getElementById(listId);
+  if (!fileObj) { list.innerHTML = ''; return; }
+  list.innerHTML = `
+    <div class="file-item">
+      <span class="file-icon">${icon}</span>
+      <div class="file-info">
+        <div class="file-name">${fileObj.file.name}</div>
+        <div class="file-size">${formatSize(fileObj.file.size)} · ${fileObj.uploaded ? '✅ 已上传' : '⏳ 待上传'}</div>
+      </div>
+    </div>`;
+}
+
+function removeVideo(i) {
+  videoFiles.splice(i, 1);
+  renderVideoList();
+}
+
+// ── 拖拽排序 ──────────────────────────────────────────────────────────────────
+let dragIdx = null;
+function bindDrag() {
+  document.querySelectorAll('#videoList .file-item').forEach(el => {
+    el.addEventListener('dragstart', () => { dragIdx = +el.dataset.idx; el.style.opacity='.4'; });
+    el.addEventListener('dragend', () => { el.style.opacity='1'; });
+    el.addEventListener('dragover', e => { e.preventDefault(); el.style.background='#2d1b4440'; });
+    el.addEventListener('dragleave', () => { el.style.background=''; });
+    el.addEventListener('drop', e => {
+      e.preventDefault(); el.style.background='';
+      const toIdx = +el.dataset.idx;
+      if (dragIdx !== null && dragIdx !== toIdx) {
+        const moved = videoFiles.splice(dragIdx, 1)[0];
+        videoFiles.splice(toIdx, 0, moved);
+        renderVideoList();
+      }
+    });
+  });
+}
+
+// ── 文件选择监听 ──────────────────────────────────────────────────────────────
+document.getElementById('videoInput').addEventListener('change', e => {
+  [...e.target.files].forEach(f => videoFiles.push({ file: f, uploaded: false, filename: null }));
+  renderVideoList();
+  e.target.value = '';
+});
+
+document.getElementById('logoInput').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (f) { logoFile = { file: f, uploaded: false, filename: null }; renderSingleFile('logoList', logoFile, '🖼️'); }
+  e.target.value = '';
+});
+
+document.getElementById('audioInput').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (f) { audioFile = { file: f, uploaded: false, filename: null }; renderSingleFile('audioList', audioFile, '🎵'); }
+  e.target.value = '';
+});
+
+// 拖拽区域高亮
+['videoDropZone','logoDropZone','audioDropZone'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('dragover'); });
+  el.addEventListener('dragleave', () => el.classList.remove('dragover'));
+  el.addEventListener('drop', () => el.classList.remove('dragover'));
+});
+
+// ── Range 显示 ────────────────────────────────────────────────────────────────
+document.getElementById('logoScale').addEventListener('input', function() {
+  document.getElementById('logoScaleVal').textContent = Math.round(this.value*100) + '%';
+});
+document.getElementById('audioVolume').addEventListener('input', function() {
+  document.getElementById('audioVolumeVal').textContent = Math.round(this.value*100) + '%';
+});
+
+// ── 上传文件 ──────────────────────────────────────────────────────────────────
+document.getElementById('uploadVideoBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('uploadVideoBtn');
+  btn.disabled = true; btn.textContent = '上传中...';
+
+  try {
+    // 上传视频
+    const fd = new FormData();
+    videoFiles.forEach(v => fd.append('files', v.file));
+    if (logoFile && !logoFile.uploaded) fd.append('files', logoFile.file);
+    if (audioFile && !audioFile.uploaded) fd.append('files', audioFile.file);
+
+    const r = await fetch(API + '/api/upload', { method: 'POST', body: fd });
+    const data = await r.json();
+
+    if (!data.success) throw new Error(data.error);
+
+    // 把文件名映射回去
+    let di = 0;
+    videoFiles.forEach(v => { v.filename = data.files[di++].filename; v.uploaded = true; });
+    if (logoFile && !logoFile.uploaded && di < data.files.length) {
+      logoFile.filename = data.files[di++].filename; logoFile.uploaded = true;
+    }
+    if (audioFile && !audioFile.uploaded && di < data.files.length) {
+      audioFile.filename = data.files[di++].filename; audioFile.uploaded = true;
+    }
+
+    renderVideoList();
+    renderSingleFile('logoList', logoFile, '🖼️');
+    renderSingleFile('audioList', audioFile, '🎵');
+
+    btn.textContent = '✅ 上传完成';
+    document.getElementById('composeBtn').disabled = false;
+    document.getElementById('s2').classList.add('done');
+    document.getElementById('s3').classList.add('active');
+  } catch(e) {
+    btn.textContent = '❌ 上传失败，重试';
+    btn.disabled = false;
+    alert('上传失败：' + e.message);
+  }
+});
+
+// ── 合成视频 ──────────────────────────────────────────────────────────────────
+document.getElementById('composeBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('composeBtn');
+  btn.disabled = true; btn.textContent = '⏳ 合成中，请稍候...';
+
+  const progressWrap = document.getElementById('progressWrap');
+  const progressFill = document.getElementById('progressFill');
+  const progressText = document.getElementById('progressText');
+  const resultWrap = document.getElementById('resultWrap');
+  resultWrap.style.display = 'none';
+  progressWrap.style.display = 'block';
+
+  // 进度动画（模拟）
+  let prog = 0;
+  const steps = [
+    [20, '📦 正在合并视频片段...'],
+    [50, '🖼️ 正在叠加 Logo 水印...'],
+    [75, '🎵 正在混入背景音乐...'],
+    [90, '🎞️ 正在编码输出...'],
+  ];
+  let si = 0;
+  const timer = setInterval(() => {
+    if (si < steps.length && prog >= steps[si][0] - 15) {
+      progressText.textContent = steps[si][1]; si++;
+    }
+    if (prog < 88) { prog += Math.random() * 3; progressFill.style.width = prog + '%'; }
+  }, 400);
+
+  try {
+    const body = {
+      videoFiles: videoFiles.map(v => ({ filename: v.filename })),
+      logoFile: logoFile ? { filename: logoFile.filename } : null,
+      audioFile: audioFile ? { filename: audioFile.filename } : null,
+      logoPos: document.getElementById('logoPos').value,
+      logoScale: parseFloat(document.getElementById('logoScale').value),
+      audioVolume: parseFloat(document.getElementById('audioVolume').value),
+    };
+
+    const r = await fetch(API + '/api/compose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await r.json();
+
+    clearInterval(timer);
+    if (!data.success) throw new Error(data.error);
+
+    progressFill.style.width = '100%';
+    progressText.textContent = '✅ 合成完成！';
+    setTimeout(() => { progressWrap.style.display = 'none'; }, 1000);
+
+    resultWrap.style.display = 'block';
+    const outputUrl = API + '/api/download/' + data.outputFile;
+    document.getElementById('downloadBtn').onclick = () => {
+      const a = document.createElement('a');
+      a.href = outputUrl; a.download = data.outputFile; a.click();
+    };
+    const vid = document.getElementById('previewVideo');
+    vid.src = outputUrl; vid.style.display = 'block';
+
+    document.getElementById('s3').classList.add('done');
+    btn.textContent = '✅ 合成成功！可再次合成';
+    btn.disabled = false;
+
+  } catch(e) {
+    clearInterval(timer);
+    progressWrap.style.display = 'none';
+    btn.textContent = '❌ 合成失败，重试';
+    btn.disabled = false;
+    alert('合成失败：' + e.message);
+  }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KV 延展工具 · AI素材工厂</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #0f1117;
+      min-height: 100vh;
+      color: #e2e8f0;
+    }
+    header {
+      background: rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header a { color: rgba(255,255,255,0.4); font-size: 13px; text-decoration: none; }
+    header a:hover { color: #fff; }
+    header .sep { color: rgba(255,255,255,0.2); }
+    header .title { font-size: 15px; font-weight: 600; color: #a78bfa; }
+    .main { display: flex; gap: 0; min-height: calc(100vh - 57px); }
+
+    /* 左侧控制面板 */
+    .panel {
+      width: 360px;
+      min-width: 360px;
+      background: rgba(255,255,255,0.03);
+      border-right: 1px solid rgba(255,255,255,0.08);
+      padding: 28px 24px;
+      overflow-y: auto;
+    }
+    .panel h3 {
+      font-size: 13px;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      margin-top: 28px;
+    }
+    .panel h3:first-child { margin-top: 0; }
+
+    /* 上传区域 */
+    .upload-zone {
+      border: 2px dashed rgba(167,139,250,0.35);
+      border-radius: 14px;
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(167,139,250,0.04);
+      position: relative;
+    }
+    .upload-zone:hover { border-color: rgba(167,139,250,0.7); background: rgba(167,139,250,0.08); }
+    .upload-zone.has-image { padding: 0; border-style: solid; }
+    .upload-zone img { width: 100%; border-radius: 12px; display: block; max-height: 200px; object-fit: contain; }
+    .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .upload-icon { font-size: 36px; margin-bottom: 10px; }
+    .upload-text { font-size: 13px; color: rgba(255,255,255,0.45); }
+    .upload-hint { font-size: 11px; color: rgba(255,255,255,0.25); margin-top: 6px; }
+
+    /* 尺寸选择 */
+    .size-groups { display: flex; flex-direction: column; gap: 10px; }
+    .size-group-label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.3);
+      margin-bottom: 4px;
+      margin-top: 6px;
+    }
+    .size-items { display: flex; flex-direction: column; gap: 6px; }
+    .size-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .size-item:hover { background: rgba(255,255,255,0.07); }
+    .size-item.selected { background: rgba(167,139,250,0.12); border-color: rgba(167,139,250,0.4); }
+    .size-item input[type=checkbox] { accent-color: #a78bfa; width: 15px; height: 15px; flex-shrink: 0; }
+    .size-name { font-size: 13px; font-weight: 500; flex: 1; }
+    .size-dims { font-size: 11px; color: rgba(255,255,255,0.35); }
+    .size-badge {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 8px;
+      background: rgba(239,68,68,0.2);
+      color: #fca5a5;
+      border: 1px solid rgba(239,68,68,0.25);
+    }
+    .size-badge.ok { background: rgba(52,211,153,0.12); color: #6ee7b7; border-color: rgba(52,211,153,0.2); }
+
+    /* 文案设置 */
+    .form-item { margin-bottom: 14px; }
+    .form-label {
+      font-size: 12px;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .form-label .required { color: #f472b6; font-size: 10px; }
+    input[type=text], textarea, select {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: #e2e8f0;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+      resize: vertical;
+    }
+    input[type=text]:focus, textarea:focus { border-color: rgba(167,139,250,0.6); background: rgba(167,139,250,0.06); }
+    select option { background: #1e1b4b; }
+
+    /* 按钮 */
+    .btn {
+      width: 100%;
+      padding: 13px;
+      border-radius: 12px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #7c3aed, #6d28d9);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(124,58,237,0.5); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.7);
+    }
+    .btn-outline:hover { background: rgba(255,255,255,0.06); }
+    .btn-select-all { width: auto; padding: 5px 12px; font-size: 11px; margin-top: 0; border-radius: 6px; }
+
+    /* 右侧预览区 */
+    .preview-area {
+      flex: 1;
+      padding: 28px 32px;
+      overflow-y: auto;
+      background: #0f1117;
+    }
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .preview-header h2 { font-size: 18px; font-weight: 600; }
+    .preview-count {
+      font-size: 12px;
+      color: rgba(255,255,255,0.35);
+      background: rgba(255,255,255,0.06);
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+    .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .preview-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+    .preview-card:hover { border-color: rgba(167,139,250,0.35); transform: translateY(-2px); }
+    .preview-canvas-wrap {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: #1a1a2e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .preview-canvas-wrap canvas { max-width: 100%; max-height: 100%; }
+    .preview-card-info { padding: 12px 14px; }
+    .preview-card-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+    .preview-card-size { font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 10px; }
+    .preview-card-actions { display: flex; gap: 8px; }
+    .btn-dl {
+      flex: 1; padding: 7px; font-size: 11px; border-radius: 7px;
+      background: rgba(167,139,250,0.15); border: 1px solid rgba(167,139,250,0.3);
+      color: #c4b5fd; cursor: pointer; transition: all 0.2s; font-weight: 500;
+    }
+    .btn-dl:hover { background: rgba(167,139,250,0.25); }
+
+    /* 空状态 */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+      opacity: 0.3;
+    }
+    .empty-state .icon { font-size: 64px; margin-bottom: 16px; }
+    .empty-state p { font-size: 14px; }
+
+    /* 进度条 */
+    .progress-bar {
+      height: 4px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 4px;
+      margin: 16px 0;
+      overflow: hidden;
+      display: none;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #7c3aed, #60a5fa);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+    .status-msg { font-size: 12px; color: rgba(255,255,255,0.4); text-align: center; margin-bottom: 8px; display: none; }
+
+    /* 规则提示 */
+    .rule-tip {
+      font-size: 11px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(251,146,60,0.1);
+      border: 1px solid rgba(251,146,60,0.2);
+      color: #fdba74;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+    .select-all-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html">← 工具箱首页</a>
+    <span class="sep">/</span>
+    <span class="title">🖼️ KV 延展工具</span>
+  </header>
+
+  <div class="main">
+    <!-- 左侧控制面板 -->
+    <div class="panel">
+      <h3>📎 上传原始 KV</h3>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="kvInput" accept="image/*" />
+        <div class="upload-icon">🖼️</div>
+        <div class="upload-text">点击或拖拽上传 KV 主视觉</div>
+        <div class="upload-hint">支持 PNG / JPG / WEBP，建议高清大图</div>
+      </div>
+
+      <h3>📐 选择延展尺寸</h3>
+      <div class="select-all-row">
+        <span style="font-size:12px;color:rgba(255,255,255,0.4)">选择要生成的物料规格</span>
+        <button class="btn btn-outline btn-select-all" onclick="selectAllSizes()">全选</button>
+      </div>
+      <div class="size-groups" id="sizeGroups"></div>
+
+      <h3>✏️ 文案配置</h3>
+      <div class="form-item">
+        <div class="form-label">主标题 <span class="required">竞赛图/回流图需要</span></div>
+        <input type="text" id="mainTitle" placeholder="例：战令赛季正式开启" />
+      </div>
+      <div class="form-item">
+        <div class="form-label">副标题</div>
+        <input type="text" id="subTitle" placeholder="例：限时福利·不容错过" />
+      </div>
+      <div class="form-item">
+        <div class="form-label">特色玩法（回流推荐图用）</div>
+        <input type="text" id="feature" placeholder="例：新赛季独家玩法全面升级" />
+      </div>
+      <div class="form-item">
+        <div class="form-label">详细说明（回流推荐图用）</div>
+        <textarea id="detail" rows="2" placeholder="例：回归即送专属皮肤，限时7天有效"></textarea>
+      </div>
+
+      <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="status-msg" id="statusMsg"></div>
+      <button class="btn btn-primary" id="generateBtn" onclick="generateAll()">
+        ✨ 生成所有选中物料
+      </button>
+      <button class="btn btn-outline" style="margin-top:10px" onclick="downloadAll()" id="downloadAllBtn" disabled>
+        ⬇️ 批量下载全部
+      </button>
+    </div>
+
+    <!-- 右侧预览区 -->
+    <div class="preview-area">
+      <div class="preview-header">
+        <h2>物料预览</h2>
+        <span class="preview-count" id="previewCount">等待生成</span>
+      </div>
+      <div id="previewGrid" class="preview-grid">
+        <div class="empty-state">
+          <div class="icon">🎨</div>
+          <p>上传 KV 并选择规格后，点击生成</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============ 尺寸规格数据 ============
+    const SIZE_SPECS = [
+      {
+        group: '更新公告图',
+        noText: false,
+        items: [
+          { id: 'notice_sm', name: '更新公告图·小', w: 540, h: 220, textMode: 'kv-text' },
+          { id: 'notice_md', name: '更新公告图·中', w: 720, h: 290, textMode: 'kv-text' },
+          { id: 'notice_lg', name: '更新公告图·大', w: 1080, h: 440, textMode: 'kv-text' },
+        ]
+      },
+      {
+        group: '竞赛公告图',
+        noText: false,
+        items: [
+          { id: 'race_mobile', name: '竞赛图·移动端', w: 934, h: 462, textMode: 'title' },
+          { id: 'race_pc', name: '竞赛图·PC端', w: 3736, h: 1848, textMode: 'title' },
+        ]
+      },
+      {
+        group: '回流推荐图',
+        noText: false,
+        items: [
+          { id: 'recall', name: '回流玩法推荐图', w: 1440, h: 720, textMode: 'recall', format: 'png', maxKB: 720 },
+        ]
+      },
+      {
+        group: '无文字物料（合规）',
+        noText: true,
+        items: [
+          { id: 'ios_today', name: 'IOS Today图', w: 5244, h: 2950, textMode: 'none' },
+          { id: 'banner', name: 'Banner图', w: 4320, h: 1080, textMode: 'none' },
+          { id: 'iae_h', name: 'IAE卡片·横屏', w: 3840, h: 2160, textMode: 'none' },
+          { id: 'iae_v', name: 'IAE卡片·竖屏', w: 2160, h: 3840, textMode: 'none' },
+        ]
+      }
+    ];
+
+    // ============ 初始化尺寸列表 ============
+    function initSizeGroups() {
+      const container = document.getElementById('sizeGroups');
+      SIZE_SPECS.forEach(group => {
+        const label = document.createElement('div');
+        label.className = 'size-group-label';
+        label.textContent = group.group;
+        container.appendChild(label);
+
+        const itemsWrap = document.createElement('div');
+        itemsWrap.className = 'size-items';
+        group.items.forEach(spec => {
+          const item = document.createElement('label');
+          item.className = 'size-item';
+          item.dataset.id = spec.id;
+          item.innerHTML = `
+            <input type="checkbox" value="${spec.id}" checked onchange="updateItemStyle(this)" />
+            <span class="size-name">${spec.name}</span>
+            <span class="size-dims">${spec.w}×${spec.h}</span>
+            ${group.noText ? '<span class="size-badge">无文字</span>' : '<span class="size-badge ok">可加文案</span>'}
+          `;
+          item.classList.add('selected');
+          itemsWrap.appendChild(item);
+        });
+        container.appendChild(itemsWrap);
+
+        if (group.noText) {
+          const tip = document.createElement('div');
+          tip.className = 'rule-tip';
+          tip.textContent = '⚠️ 合规要求：此类物料不允许出现任何文字，不允许出现武器指向观看者的画面';
+          container.appendChild(tip);
+        }
+      });
+    }
+
+    function updateItemStyle(checkbox) {
+      const item = checkbox.closest('.size-item');
+      if (checkbox.checked) item.classList.add('selected');
+      else item.classList.remove('selected');
+    }
+
+    function selectAllSizes() {
+      document.querySelectorAll('.size-item input[type=checkbox]').forEach(cb => {
+        cb.checked = true;
+        cb.closest('.size-item').classList.add('selected');
+      });
+    }
+
+    // ============ 图片上传 ============
+    let kvImage = null;
+    document.getElementById('kvInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        const img = new Image();
+        img.onload = function() {
+          kvImage = img;
+          const zone = document.getElementById('uploadZone');
+          zone.classList.add('has-image');
+          zone.innerHTML = `<img src="${ev.target.result}" alt="KV预览"><input type="file" id="kvInput" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" />`;
+          document.getElementById('kvInput').addEventListener('change', arguments.callee.caller);
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // ============ 生成逻辑 ============
+    let generatedCanvases = {};
+
+    async function generateAll() {
+      if (!kvImage) {
+        alert('请先上传原始 KV 图片！');
+        return;
+      }
+      const selectedIds = Array.from(document.querySelectorAll('.size-item input:checked')).map(cb => cb.value);
+      if (selectedIds.length === 0) {
+        alert('请至少选择一种物料规格！');
+        return;
+      }
+
+      const allSpecs = SIZE_SPECS.flatMap(g => g.items);
+      const selected = allSpecs.filter(s => selectedIds.includes(s.id));
+
+      const btn = document.getElementById('generateBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ 生成中...';
+
+      const progressBar = document.getElementById('progressBar');
+      const progressFill = document.getElementById('progressFill');
+      const statusMsg = document.getElementById('statusMsg');
+      progressBar.style.display = 'block';
+      statusMsg.style.display = 'block';
+
+      generatedCanvases = {};
+      const grid = document.getElementById('previewGrid');
+      grid.innerHTML = '';
+
+      const mainTitle = document.getElementById('mainTitle').value;
+      const subTitle = document.getElementById('subTitle').value;
+      const feature = document.getElementById('feature').value;
+      const detail = document.getElementById('detail').value;
+
+      for (let i = 0; i < selected.length; i++) {
+        const spec = selected[i];
+        statusMsg.textContent = `正在生成：${spec.name}（${i+1}/${selected.length}）`;
+        progressFill.style.width = `${((i+1)/selected.length*100).toFixed(0)}%`;
+
+        await new Promise(r => setTimeout(r, 30));
+
+        // 生成canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = spec.w;
+        canvas.height = spec.h;
+        const ctx = canvas.getContext('2d');
+
+        // 绘制背景（KV填充）
+        drawKVFit(ctx, kvImage, spec.w, spec.h);
+
+        // 根据textMode叠加文字
+        if (spec.textMode !== 'none') {
+          drawTextOverlay(ctx, spec, mainTitle, subTitle, feature, detail);
+        }
+
+        generatedCanvases[spec.id] = { canvas, spec };
+
+        // 创建预览卡片（缩略图）
+        const previewCanvas = document.createElement('canvas');
+        const maxW = 440, maxH = 248;
+        let pw = maxW, ph = Math.round(maxW * spec.h / spec.w);
+        if (ph > maxH) { ph = maxH; pw = Math.round(maxH * spec.w / spec.h); }
+        previewCanvas.width = pw;
+        previewCanvas.height = ph;
+        const pctx = previewCanvas.getContext('2d');
+        pctx.drawImage(canvas, 0, 0, pw, ph);
+
+        const card = document.createElement('div');
+        card.className = 'preview-card';
+        const wrap = document.createElement('div');
+        wrap.className = 'preview-canvas-wrap';
+        wrap.style.aspectRatio = `${spec.w}/${spec.h}`;
+        wrap.appendChild(previewCanvas);
+        const info = document.createElement('div');
+        info.className = 'preview-card-info';
+        info.innerHTML = `
+          <div class="preview-card-name">${spec.name}</div>
+          <div class="preview-card-size">${spec.w} × ${spec.h} px${spec.textMode === 'none' ? ' · 无文字' : ''}</div>
+          <div class="preview-card-actions">
+            <button class="btn-dl" onclick="downloadSingle('${spec.id}')">⬇️ 下载</button>
+          </div>
+        `;
+        card.appendChild(wrap);
+        card.appendChild(info);
+        grid.appendChild(card);
+      }
+
+      progressFill.style.width = '100%';
+      statusMsg.textContent = `✅ 已生成 ${selected.length} 张物料`;
+      btn.disabled = false;
+      btn.textContent = '✨ 重新生成';
+      document.getElementById('downloadAllBtn').disabled = false;
+      document.getElementById('previewCount').textContent = `已生成 ${selected.length} 张`;
+    }
+
+    // 填充绘制KV（cover模式）
+    function drawKVFit(ctx, img, w, h) {
+      const imgAR = img.width / img.height;
+      const canvasAR = w / h;
+      let sx, sy, sw, sh;
+      if (imgAR > canvasAR) {
+        sh = img.height;
+        sw = sh * canvasAR;
+        sx = (img.width - sw) / 2;
+        sy = 0;
+      } else {
+        sw = img.width;
+        sh = sw / canvasAR;
+        sx = 0;
+        sy = (img.height - sh) / 2;
+      }
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+    }
+
+    // 文字叠加
+    function drawTextOverlay(ctx, spec, mainTitle, subTitle, feature, detail) {
+      const w = spec.w, h = spec.h;
+      const scale = Math.min(w / 1080, h / 600);
+
+      if (spec.textMode === 'kv-text') {
+        // 更新公告图：不叠加额外文字，KV原文字已在图中
+        return;
+      }
+
+      // 底部渐变遮罩
+      const grad = ctx.createLinearGradient(0, h * 0.45, 0, h);
+      grad.addColorStop(0, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.72)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.textBaseline = 'bottom';
+      ctx.textAlign = 'left';
+
+      if (spec.textMode === 'title' && mainTitle) {
+        // 竞赛公告图：主标题 + 副标题
+        const fontSize = Math.round(48 * scale);
+        ctx.font = `bold ${fontSize}px "PingFang SC","Microsoft YaHei",sans-serif`;
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur = 12;
+        ctx.fillText(mainTitle, w * 0.06, h * 0.88);
+        if (subTitle) {
+          const subSize = Math.round(26 * scale);
+          ctx.font = `${subSize}px "PingFang SC","Microsoft YaHei",sans-serif`;
+          ctx.fillStyle = 'rgba(255,255,255,0.8)';
+          ctx.fillText(subTitle, w * 0.06, h * 0.88 + fontSize * 1.3);
+        }
+        ctx.shadowBlur = 0;
+      }
+
+      if (spec.textMode === 'recall') {
+        // 回流推荐图：主标题 + 特色玩法 + 详细说明
+        const titleSize = Math.round(52 * scale);
+        ctx.font = `bold ${titleSize}px "PingFang SC","Microsoft YaHei",sans-serif`;
+        ctx.fillStyle = '#fff';
+        ctx.shadowColor = 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur = 14;
+        if (mainTitle) ctx.fillText(mainTitle, w * 0.06, h * 0.75);
+        if (feature) {
+          const featureSize = Math.round(28 * scale);
+          ctx.font = `${featureSize}px "PingFang SC","Microsoft YaHei",sans-serif`;
+          ctx.fillStyle = '#fde68a';
+          ctx.fillText(feature, w * 0.06, h * 0.75 + titleSize * 1.3);
+        }
+        if (detail) {
+          const detailSize = Math.round(22 * scale);
+          ctx.font = `${detailSize}px "PingFang SC","Microsoft YaHei",sans-serif`;
+          ctx.fillStyle = 'rgba(255,255,255,0.7)';
+          ctx.fillText(detail, w * 0.06, h * 0.75 + titleSize * 1.3 + 36 * scale);
+        }
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // ============ 下载 ============
+    function downloadSingle(id) {
+      const item = generatedCanvases[id];
+      if (!item) return;
+      const { canvas, spec } = item;
+      const format = spec.format || 'png';
+      const quality = format === 'png' ? undefined : 0.92;
+      canvas.toBlob(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `KV延展_${spec.name}_${spec.w}x${spec.h}.${format}`;
+        a.click();
+      }, `image/${format}`, quality);
+    }
+
+    function downloadAll() {
+      Object.keys(generatedCanvases).forEach((id, i) => {
+        setTimeout(() => downloadSingle(id), i * 300);
+      });
+    }
+
+    // 初始化
+    initSizeGroups();
+  </script>
+</body>
+</html>

@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>视频合成工具 · AI素材工厂</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #0f1117;
+      min-height: 100vh;
+      color: #e2e8f0;
+    }
+    header {
+      background: rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header a { color: rgba(255,255,255,0.4); font-size: 13px; text-decoration: none; }
+    header a:hover { color: #fff; }
+    header .sep { color: rgba(255,255,255,0.2); }
+    header .title { font-size: 15px; font-weight: 600; color: #f472b6; }
+
+    .container { max-width: 920px; margin: 0 auto; padding: 36px 24px; }
+    h3 {
+      font-size: 13px;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      margin-top: 36px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h3:first-child { margin-top: 0; }
+
+    /* 视频列表 */
+    .video-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
+    .video-item {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: auto 1fr auto auto auto;
+      align-items: center;
+      gap: 12px;
+    }
+    .video-item .drag-handle { cursor: grab; color: rgba(255,255,255,0.2); font-size: 18px; user-select: none; }
+    .video-item .drag-handle:active { cursor: grabbing; }
+    .video-info { display: flex; flex-direction: column; gap: 2px; }
+    .video-name { font-size: 13px; font-weight: 500; }
+    .video-duration { font-size: 11px; color: rgba(255,255,255,0.35); }
+    .time-range {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 6px 10px;
+    }
+    .time-range input {
+      width: 60px;
+      background: transparent;
+      border: none;
+      color: #e2e8f0;
+      font-size: 12px;
+      outline: none;
+      text-align: center;
+    }
+    .time-range .sep { color: rgba(255,255,255,0.3); font-size: 11px; }
+    .priority-badge {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      background: rgba(244,114,182,0.2);
+      border: 1px solid rgba(244,114,182,0.3);
+      color: #f9a8d4;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-remove {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.2);
+      color: #fca5a5;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .btn-remove:hover { background: rgba(239,68,68,0.25); }
+
+    /* 添加视频按钮 */
+    .add-video-zone {
+      border: 2px dashed rgba(244,114,182,0.3);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(244,114,182,0.03);
+      position: relative;
+    }
+    .add-video-zone:hover { border-color: rgba(244,114,182,0.6); background: rgba(244,114,182,0.06); }
+    .add-video-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .add-video-zone p { font-size: 13px; color: rgba(255,255,255,0.4); }
+
+    /* 配置卡片 */
+    .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .config-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 20px;
+    }
+    .config-card h4 { font-size: 13px; font-weight: 600; margin-bottom: 14px; color: rgba(255,255,255,0.7); }
+    .form-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .form-row label { font-size: 12px; color: rgba(255,255,255,0.4); min-width: 56px; }
+    .form-row input, .form-row select {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 7px 10px;
+      color: #e2e8f0;
+      font-size: 12px;
+      outline: none;
+    }
+    .form-row input:focus { border-color: rgba(244,114,182,0.5); }
+    select option { background: #1e1b4b; }
+
+    /* 上传小区域 */
+    .mini-upload {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+    .mini-upload:hover { background: rgba(255,255,255,0.07); }
+    .mini-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .mini-upload .file-name { font-size: 12px; color: rgba(255,255,255,0.45); flex: 1; }
+    .mini-upload .has-file { color: #6ee7b7; }
+    .upload-btn-text { font-size: 11px; color: #f9a8d4; white-space: nowrap; }
+
+    /* 输出配置 */
+    .output-config { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .output-item { }
+    .output-item label { font-size: 11px; color: rgba(255,255,255,0.35); display: block; margin-bottom: 6px; }
+    .output-item select, .output-item input {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: #e2e8f0;
+      font-size: 12px;
+      outline: none;
+    }
+
+    /* 生成区域 */
+    .generate-section {
+      background: linear-gradient(135deg, rgba(244,114,182,0.08), rgba(251,146,60,0.06));
+      border: 1px solid rgba(244,114,182,0.2);
+      border-radius: 16px;
+      padding: 28px;
+      margin-top: 36px;
+    }
+    .generate-section h3 { margin-top: 0; margin-bottom: 0; }
+    .btn {
+      padding: 13px 28px;
+      border-radius: 12px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #be185d, #9d174d);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(190,24,93,0.4);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(190,24,93,0.5); }
+    .btn-copy {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.7);
+    }
+    .btn-copy:hover { background: rgba(255,255,255,0.12); }
+
+    /* 脚本输出 */
+    .script-output {
+      background: #0d1117;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 0;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+    .script-output-header {
+      background: rgba(255,255,255,0.04);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .script-output-header span { font-size: 12px; color: rgba(255,255,255,0.35); font-family: monospace; }
+    .script-copy-btn {
+      font-size: 11px;
+      padding: 4px 12px;
+      background: rgba(244,114,182,0.15);
+      border: 1px solid rgba(244,114,182,0.25);
+      color: #f9a8d4;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .script-copy-btn:hover { background: rgba(244,114,182,0.25); }
+    .script-output pre {
+      padding: 20px;
+      font-size: 12px;
+      font-family: 'Courier New', Consolas, monospace;
+      color: #a5d6ff;
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    .script-output pre .comment { color: #6e7681; }
+    .script-output pre .cmd { color: #7ee787; }
+    .script-output pre .flag { color: #ffa657; }
+    .script-output pre .path { color: #a5d6ff; }
+
+    /* 步骤说明 */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 10px;
+    }
+    .step-num {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      background: rgba(244,114,182,0.2);
+      color: #f9a8d4;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step-content { font-size: 12.5px; color: rgba(255,255,255,0.6); line-height: 1.6; }
+    .step-content strong { color: rgba(255,255,255,0.85); }
+
+    .btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+
+    /* 提示区 */
+    .tip-box {
+      background: rgba(251,146,60,0.08);
+      border: 1px solid rgba(251,146,60,0.2);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: #fdba74;
+      line-height: 1.6;
+      margin-top: 14px;
+    }
+
+    /* 设备适配标签 */
+    .device-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .device-tag {
+      font-size: 11px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.5);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .device-tag.active { background: rgba(244,114,182,0.15); border-color: rgba(244,114,182,0.4); color: #f9a8d4; }
+    .device-tag:hover { background: rgba(255,255,255,0.06); }
+
+    .section-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 8px 0 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="index.html">← 工具箱首页</a>
+    <span class="sep">/</span>
+    <span class="title">🎬 视频合成工具</span>
+  </header>
+
+  <div class="container">
+
+    <!-- Step 1: 视频素材管理 -->
+    <h3>📹 视频素材 & 切片配置</h3>
+    <div class="video-list" id="videoList"></div>
+    <div class="add-video-zone" id="addVideoZone">
+      <input type="file" id="videoInput" accept="video/*" multiple />
+      <p>＋ 点击或拖拽上传视频文件（支持多选，可上传多个）</p>
+    </div>
+
+    <div class="tip-box" style="margin-top:12px">
+      💡 配置每段视频的截取时间段（如 A视频取 4~8 秒），拖动左侧图标可调整合并顺序（即优先级）
+    </div>
+
+    <!-- Step 2: Logo & 音频 -->
+    <h3>🎨 Logo 动画 & 背景音频</h3>
+    <div class="config-grid">
+      <div class="config-card">
+        <h4>🎭 Logo 动画配置</h4>
+        <div class="form-row">
+          <label>Logo 文件</label>
+          <div class="mini-upload" style="flex:1">
+            <input type="file" id="logoInput" accept="image/*,video/mp4,.gif" onchange="handleLogoUpload(this)" />
+            <span class="file-name" id="logoFileName">未上传</span>
+            <span class="upload-btn-text">上传</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>位置</label>
+          <select id="logoPosition">
+            <option value="topleft">左上角</option>
+            <option value="topright" selected>右上角</option>
+            <option value="bottomleft">左下角</option>
+            <option value="bottomright">右下角</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>透明度</label>
+          <input type="range" id="logoOpacity" min="10" max="100" value="80" style="flex:1;accent-color:#f472b6" oninput="document.getElementById('logoOpacityVal').textContent=this.value+'%'" />
+          <span id="logoOpacityVal" style="font-size:12px;color:rgba(255,255,255,0.4);min-width:36px">80%</span>
+        </div>
+        <div class="form-row">
+          <label>显示时段</label>
+          <select id="loopMode">
+            <option value="full">全程显示</option>
+            <option value="custom">自定义时段</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="config-card">
+        <h4>🎵 背景音频配置</h4>
+        <div class="form-row">
+          <label>音频文件</label>
+          <div class="mini-upload" style="flex:1">
+            <input type="file" id="audioInput" accept="audio/*" onchange="handleAudioUpload(this)" />
+            <span class="file-name" id="audioFileName">未上传</span>
+            <span class="upload-btn-text">上传</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>音量</label>
+          <input type="range" id="audioVolume" min="10" max="100" value="80" style="flex:1;accent-color:#f472b6" oninput="document.getElementById('audioVolumeVal').textContent=this.value+'%'" />
+          <span id="audioVolumeVal" style="font-size:12px;color:rgba(255,255,255,0.4);min-width:36px">80%</span>
+        </div>
+        <div class="form-row">
+          <label>超出处理</label>
+          <select id="audioOverflow">
+            <option value="loop">循环播放（音频短于视频）</option>
+            <option value="trim">截取前段（音频长于视频）</option>
+            <option value="auto" selected>自动判断</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>混音模式</label>
+          <select id="audioMix">
+            <option value="replace">替换原声</option>
+            <option value="mix" selected>混合（BGM + 原声）</option>
+            <option value="original">保留原声</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: 输出配置 -->
+    <h3>⚙️ 输出配置</h3>
+    <div class="output-config">
+      <div class="output-item">
+        <label>输出格式</label>
+        <select id="outputFormat">
+          <option value="mp4" selected>MP4（推荐）</option>
+          <option value="mov">MOV</option>
+        </select>
+      </div>
+      <div class="output-item">
+        <label>画面比例</label>
+        <select id="outputRatio">
+          <option value="16:9" selected>16:9（横屏）</option>
+          <option value="9:16">9:16（竖屏）</option>
+          <option value="4:3">4:3</option>
+          <option value="1:1">1:1（方形）</option>
+        </select>
+      </div>
+      <div class="output-item">
+        <label>文件命名</label>
+        <input type="text" id="outputName" value="AI合成视频_{日期}" placeholder="AI合成视频_{日期}" />
+      </div>
+    </div>
+
+    <h3 style="margin-top:24px">📱 录制设备适配</h3>
+    <p style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:8px">选择原始视频的录制设备，自动适配分辨率和色彩配置</p>
+    <div class="device-tags">
+      <span class="device-tag active" onclick="toggleDevice(this, 'iphone8plus')">📱 iPhone 8 Plus</span>
+      <span class="device-tag" onclick="toggleDevice(this, 'ipadair')">📱 iPad Air</span>
+      <span class="device-tag" onclick="toggleDevice(this, 'iphonex')">📱 iPhone X</span>
+      <span class="device-tag" onclick="toggleDevice(this, 'other')">🔲 其他设备</span>
+    </div>
+
+    <!-- 生成脚本 -->
+    <div class="generate-section">
+      <h3 style="color:rgba(255,255,255,0.5)">🚀 生成 FFmpeg 合成脚本</h3>
+      <p style="font-size:13px;color:rgba(255,255,255,0.4);margin-top:10px;margin-bottom:0">
+        根据上方配置，自动生成可直接运行的 FFmpeg 命令行脚本，支持一键复制执行
+      </p>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="generateScript()">✨ 生成合成脚本</button>
+        <button class="btn btn-copy" onclick="copyScript()" id="copyScriptBtn" style="display:none">📋 复制脚本</button>
+      </div>
+
+      <div id="scriptOutput" class="script-output" style="display:none">
+        <div class="script-output-header">
+          <span>ffmpeg_merge.sh</span>
+          <button class="script-copy-btn" onclick="copyScript()">📋 复制全部</button>
+        </div>
+        <pre id="scriptContent"></pre>
+      </div>
+
+      <div class="steps" style="margin-top:24px">
+        <div style="font-size:12px;color:rgba(255,255,255,0.3);margin-bottom:4px;letter-spacing:1px">HOW TO USE</div>
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-content"><strong>安装 FFmpeg</strong>：访问 ffmpeg.org 下载安装，或通过 <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px">brew install ffmpeg</code> 安装（Mac）</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-content"><strong>准备素材</strong>：将所有视频、logo、音频文件放到同一个文件夹</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-content"><strong>运行脚本</strong>：复制生成的 FFmpeg 命令，在终端/命令提示符中运行</div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-content"><strong>获取结果</strong>：脚本执行后自动生成最终合成视频 <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px">output.mp4</code></div>
+        </div>
+      </div>
+
+      <div class="tip-box">
+        💡 如果不熟悉命令行，也可以把上面的脚本内容直接粘贴给 <strong>Knot AI</strong>，让 AI 帮你逐步执行！
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let videoItems = [];
+    let logoFile = null;
+    let audioFile = null;
+    let selectedDevices = ['iphone8plus'];
+
+    // ============ 视频上传 ============
+    document.getElementById('videoInput').addEventListener('change', function(e) {
+      Array.from(e.target.files).forEach(file => addVideoItem(file));
+      this.value = '';
+    });
+
+    function addVideoItem(file) {
+      const id = 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+      const item = { id, file, name: file.name, startSec: 0, endSec: '' };
+      videoItems.push(item);
+      renderVideoList();
+
+      // 尝试读取视频时长
+      const url = URL.createObjectURL(file);
+      const video = document.createElement('video');
+      video.src = url;
+      video.onloadedmetadata = function() {
+        item.duration = video.duration;
+        item.endSec = Math.floor(video.duration);
+        URL.revokeObjectURL(url);
+        renderVideoList();
+      };
+    }
+
+    function renderVideoList() {
+      const list = document.getElementById('videoList');
+      list.innerHTML = '';
+      videoItems.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'video-item';
+        div.dataset.id = item.id;
+        const durStr = item.duration ? `时长 ${item.duration.toFixed(1)}s` : '加载中...';
+        div.innerHTML = `
+          <span class="drag-handle" title="拖拽调整顺序">⠿</span>
+          <div class="video-info">
+            <div class="video-name">${item.name}</div>
+            <div class="video-duration">${durStr}</div>
+          </div>
+          <div class="time-range">
+            <span style="font-size:11px;color:rgba(255,255,255,0.3)">截取</span>
+            <input type="number" value="${item.startSec}" min="0" step="1" placeholder="开始" onchange="updateTime('${item.id}','start',this.value)" />
+            <span class="sep">→</span>
+            <input type="number" value="${item.endSec}" min="0" step="1" placeholder="结束" onchange="updateTime('${item.id}','end',this.value)" />
+            <span style="font-size:11px;color:rgba(255,255,255,0.3)">秒</span>
+          </div>
+          <div class="priority-badge">${idx+1}</div>
+          <button class="btn-remove" onclick="removeVideo('${item.id}')" title="移除">×</button>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function updateTime(id, type, val) {
+      const item = videoItems.find(v => v.id === id);
+      if (!item) return;
+      if (type === 'start') item.startSec = parseFloat(val) || 0;
+      else item.endSec = parseFloat(val) || '';
+    }
+
+    function removeVideo(id) {
+      videoItems = videoItems.filter(v => v.id !== id);
+      renderVideoList();
+    }
+
+    // ============ Logo & 音频 ============
+    function handleLogoUpload(input) {
+      logoFile = input.files[0];
+      if (logoFile) {
+        document.getElementById('logoFileName').textContent = logoFile.name;
+        document.getElementById('logoFileName').classList.add('has-file');
+      }
+    }
+
+    function handleAudioUpload(input) {
+      audioFile = input.files[0];
+      if (audioFile) {
+        document.getElementById('audioFileName').textContent = audioFile.name;
+        document.getElementById('audioFileName').classList.add('has-file');
+      }
+    }
+
+    // ============ 设备标签 ============
+    function toggleDevice(el, device) {
+      el.classList.toggle('active');
+      if (el.classList.contains('active')) {
+        selectedDevices.push(device);
+      } else {
+        selectedDevices = selectedDevices.filter(d => d !== device);
+      }
+    }
+
+    // ============ 生成脚本 ============
+    function generateScript() {
+      const logoPos = document.getElementById('logoPosition').value;
+      const logoOpacity = parseInt(document.getElementById('logoOpacity').value) / 100;
+      const audioVolume = parseInt(document.getElementById('audioVolume').value) / 100;
+      const audioMix = document.getElementById('audioMix').value;
+      const outputRatio = document.getElementById('outputRatio').value;
+      const outputFormat = document.getElementById('outputFormat').value;
+      const outputNameTpl = document.getElementById('outputName').value || 'AI合成视频_{日期}';
+
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+      const outputName = outputNameTpl.replace('{日期}', dateStr) + '.' + outputFormat;
+
+      const logoName = logoFile ? logoFile.name : 'logo.gif';
+      const audioName = audioFile ? audioFile.name : 'bgm.mp3';
+
+      // 位置映射
+      const posMap = {
+        topleft: 'overlay=10:10',
+        topright: "overlay=W-w-10:10",
+        bottomleft: 'overlay=10:H-h-10',
+        bottomright: "overlay=W-w-10:H-h-10"
+      };
+      const overlayPos = posMap[logoPos];
+
+      let lines = [];
+      lines.push('#!/bin/bash');
+      lines.push('# ================================================');
+      lines.push('# AI 视频合成脚本 - 由版本组 AI 素材工具箱生成');
+      lines.push(`# 生成时间: ${new Date().toLocaleString('zh-CN')}`);
+      lines.push('# ================================================');
+      lines.push('');
+      lines.push('# 【Step 1】视频切片 - 截取每段视频的指定片段');
+
+      if (videoItems.length === 0) {
+        lines.push('# ⚠️ 请先添加视频素材再生成脚本');
+        lines.push('# 示例：ffmpeg -i input.mp4 -ss 4 -to 8 -c copy clip_A.mp4');
+      } else {
+        videoItems.forEach((item, idx) => {
+          const clipName = `clip_${String.fromCharCode(65+idx)}.mp4`;
+          const start = item.startSec || 0;
+          const end = item.endSec || (item.duration ? Math.floor(item.duration) : 10);
+          lines.push(`ffmpeg -i "${item.name}" -ss ${start} -to ${end} -c copy ${clipName}`);
+        });
+      }
+
+      lines.push('');
+      lines.push('# 【Step 2】合并所有切片（按优先级顺序）');
+      if (videoItems.length > 0) {
+        const clips = videoItems.map((_, idx) => `clip_${String.fromCharCode(65+idx)}.mp4`);
+        const inputFlags = clips.map(c => `-i ${c}`).join(' ');
+        const filterInputs = clips.map((_, i) => `[${i}:v][${i}:a]`).join('');
+        lines.push(`ffmpeg ${inputFlags} -filter_complex "${filterInputs}concat=n=${clips.length}:v=1:a=1[v][a]" -map "[v]" -map "[a]" merged.mp4`);
+      } else {
+        lines.push('# ⚠️ 请先添加视频素材');
+        lines.push('# 示例：ffmpeg -i clip_A.mp4 -i clip_B.mp4 -filter_complex "[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1[v][a]" -map "[v]" -map "[a]" merged.mp4');
+      }
+
+      lines.push('');
+      lines.push('# 【Step 3】叠加 Logo 动画');
+      lines.push(`# Logo位置: ${document.getElementById('logoPosition').options[document.getElementById('logoPosition').selectedIndex].text}，透明度: ${Math.round(logoOpacity*100)}%`);
+      lines.push(`ffmpeg -i merged.mp4 -i "${logoName}" -filter_complex "[1:v]format=rgba,colorchannelmixer=aa=${logoOpacity}[logo];[0:v][logo]${overlayPos}[v]" -map "[v]" -map 0:a -c:a copy logo_merged.mp4`);
+
+      lines.push('');
+      lines.push('# 【Step 4】合入背景音频');
+      lines.push(`# 音量: ${Math.round(audioVolume*100)}%，混音模式: ${document.getElementById('audioMix').options[document.getElementById('audioMix').selectedIndex].text}`);
+
+      const audioMixValue = audioVolume.toFixed(2);
+      if (audioMix === 'replace') {
+        lines.push(`ffmpeg -i logo_merged.mp4 -stream_loop -1 -i "${audioName}" -shortest -map 0:v -map 1:a -c:v copy -filter:a "volume=${audioMixValue}" "${outputName}"`);
+      } else if (audioMix === 'original') {
+        lines.push(`cp logo_merged.mp4 "${outputName}"  # 保留原声，跳过音频替换`);
+      } else {
+        // mix
+        lines.push(`ffmpeg -i logo_merged.mp4 -stream_loop -1 -i "${audioName}" -shortest -filter_complex "[0:a]volume=1.0[orig];[1:a]volume=${audioMixValue}[bgm];[orig][bgm]amix=inputs=2:duration=first[aout]" -map 0:v -map "[aout]" -c:v copy "${outputName}"`);
+      }
+
+      lines.push('');
+      lines.push(`# ✅ 合成完成！输出文件：${outputName}`);
+      lines.push('# 如有问题，可把这段脚本发给 Knot AI 协助排查');
+
+      if (selectedDevices.length > 0) {
+        lines.push('');
+        lines.push('# ============ 设备适配说明 ============');
+        const deviceInfo = {
+          'iphone8plus': 'iPhone 8 Plus：分辨率 1080×1920 (9:16)，色彩空间 sRGB，30fps',
+          'ipadair': 'iPad Air：分辨率 2048×1536 (4:3)，色彩空间 sRGB，30fps',
+          'iphonex': 'iPhone X：分辨率 1125×2436 (19.5:9)，色彩空间 Display P3，60fps',
+          'other': '其他设备：保持原始分辨率和帧率'
+        };
+        selectedDevices.forEach(d => {
+          if (deviceInfo[d]) lines.push(`# ${deviceInfo[d]}`);
+        });
+      }
+
+      const scriptHTML = lines.map(line => {
+        if (line.startsWith('#')) return `<span class="comment">${escHtml(line)}</span>`;
+        if (line.startsWith('ffmpeg')) return `<span class="cmd">${escHtml(line)}</span>`;
+        return escHtml(line);
+      }).join('\n');
+
+      document.getElementById('scriptContent').innerHTML = scriptHTML;
+      document.getElementById('scriptOutput').style.display = 'block';
+      document.getElementById('copyScriptBtn').style.display = 'inline-flex';
+
+      // 存储原始内容供复制
+      window._scriptRaw = lines.join('\n');
+    }
+
+    function escHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function copyScript() {
+      if (!window._scriptRaw) return;
+      navigator.clipboard.writeText(window._scriptRaw).then(() => {
+        const btns = document.querySelectorAll('.script-copy-btn, #copyScriptBtn');
+        btns.forEach(btn => {
+          const orig = btn.textContent;
+          btn.textContent = '✅ 已复制！';
+          setTimeout(() => btn.textContent = orig, 2000);
+        });
+      }).catch(() => {
+        alert('请手动选中脚本内容并复制');
+      });
+    }
+  </script>
+</body>
+</html>

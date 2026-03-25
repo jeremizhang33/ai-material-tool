@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>版本组 AI 素材工具箱</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      padding: 40px 20px;
+    }
+    .logo-area {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .logo-area .badge {
+      display: inline-block;
+      background: rgba(99,102,241,0.3);
+      border: 1px solid rgba(99,102,241,0.6);
+      color: #a5b4fc;
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+    }
+    .logo-area h1 {
+      font-size: 38px;
+      font-weight: 700;
+      background: linear-gradient(90deg, #a78bfa, #60a5fa, #34d399);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+    .logo-area p {
+      color: rgba(255,255,255,0.5);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      width: 100%;
+      max-width: 780px;
+    }
+    .card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px;
+      padding: 36px 32px;
+      text-decoration: none;
+      color: #fff;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .card.kv::before { background: linear-gradient(90deg, #a78bfa, #60a5fa); }
+    .card.video::before { background: linear-gradient(90deg, #f472b6, #fb923c); }
+    .card:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.25);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .card-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      margin-bottom: 20px;
+    }
+    .card.kv .card-icon { background: rgba(167,139,250,0.2); }
+    .card.video .card-icon { background: rgba(244,114,182,0.2); }
+    .card h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .card p {
+      color: rgba(255,255,255,0.55);
+      font-size: 13.5px;
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tag {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.6);
+    }
+    .card-arrow {
+      position: absolute;
+      bottom: 28px;
+      right: 28px;
+      font-size: 20px;
+      opacity: 0.4;
+      transition: all 0.3s;
+    }
+    .card:hover .card-arrow { opacity: 1; transform: translateX(4px); }
+    .footer {
+      margin-top: 48px;
+      color: rgba(255,255,255,0.25);
+      font-size: 12px;
+      text-align: center;
+    }
+    .stat-row {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      margin-top: 32px;
+      margin-bottom: 48px;
+    }
+    .stat {
+      text-align: center;
+    }
+    .stat .num {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(90deg, #a78bfa, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat .label {
+      font-size: 12px;
+      color: rgba(255,255,255,0.4);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="logo-area">
+    <div class="badge">版本组 · AI 提效工具箱</div>
+    <h1>AI 素材工厂</h1>
+    <p>KV批量延展 · 视频自动合成<br/>减少重复劳动，让 AI 帮你干活</p>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat">
+      <div class="num">75%</div>
+      <div class="label">KV延展节省时间</div>
+    </div>
+    <div class="stat">
+      <div class="num">83%</div>
+      <div class="label">视频合成节省时间</div>
+    </div>
+    <div class="stat">
+      <div class="num">10种</div>
+      <div class="label">KV延展尺寸规格</div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <a class="card kv" href="kv-tool.html">
+      <div class="card-icon">🖼️</div>
+      <h2>KV 延展工具</h2>
+      <p>上传原始KV主视觉，一键批量生成6类10种规格物料：更新公告图、竞赛图、回流推荐图、Banner、today图、IAE卡片</p>
+      <div class="card-tags">
+        <span class="tag">更新公告图</span>
+        <span class="tag">竞赛公告图</span>
+        <span class="tag">Banner</span>
+        <span class="tag">IAE卡片</span>
+        <span class="tag">+3种</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a class="card video" href="video-tool.html">
+      <div class="card-icon">🎬</div>
+      <h2>视频合成工具</h2>
+      <p>上传多段原始视频，配置切片时间段、logo位置和背景音乐，自动生成合成脚本，支持导出 FFmpeg 命令</p>
+      <div class="card-tags">
+        <span class="tag">视频切片</span>
+        <span class="tag">自动合并</span>
+        <span class="tag">Logo叠加</span>
+        <span class="tag">背景音乐</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+  </div>
+
+  <div class="footer">
+    版本组 AI 提效工具箱 · 参考文档：AI视频合成需求文档 / AI KV延展需求文档
+  </div>
+</body>
+</html>

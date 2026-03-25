@@ -280,7 +280,7 @@
       <h3>📐 选择延展尺寸</h3>
       <div class="select-all-row">
         <span style="font-size:12px;color:rgba(255,255,255,0.4)">选择要生成的物料规格</span>
-        <button class="btn btn-outline btn-select-all" onclick="selectAllSizes()">全选</button>
+        <button class="btn btn-outline btn-select-all" id="btnSelectAll" onclick="selectAllSizes()">全选</button>
       </div>
       <div class="size-groups" id="sizeGroups"></div>
 
@@ -435,10 +435,15 @@
     }
 
     function selectAllSizes() {
-      document.querySelectorAll('.size-item input[type=checkbox]').forEach(cb => {
-        cb.checked = true;
-        cb.closest('.size-item').classList.add('selected');
+      const checkboxes = document.querySelectorAll('.size-item input[type=checkbox]');
+      const btn = document.getElementById('btnSelectAll');
+      const allChecked = [...checkboxes].every(cb => cb.checked);
+      checkboxes.forEach(cb => {
+        cb.checked = !allChecked;
+        if (!allChecked) cb.closest('.size-item').classList.add('selected');
+        else cb.closest('.size-item').classList.remove('selected');
       });
+      btn.textContent = allChecked ? '全选' : '取消全选';
     }
 
     // ============ 图片上传 ============

@@ -462,8 +462,13 @@
           zone.innerHTML = `<div style="color:rgba(255,255,255,0.5);font-size:13px;">⏳ 正在解析 PSD，请稍候...</div>`;
           try {
             const arrayBuffer = await file.arrayBuffer();
-            // ag-psd 需要先初始化 canvas 工厂
-            agPsd.initializeCanvas(document.createElement.bind(document));
+            // ag-psd 需要先初始化 canvas 工厂，传入创建 canvas 的函数
+            agPsd.initializeCanvas((width, height) => {
+              const c = document.createElement('canvas');
+              c.width = width;
+              c.height = height;
+              return c;
+            });
             const psd = agPsd.readPsd(arrayBuffer, { compositeOnly: true, skipLayerImageData: true });
             const canvas = psd.canvas;
             if (!canvas) throw new Error('无法读取 PSD 合成图层，请确认文件完整');

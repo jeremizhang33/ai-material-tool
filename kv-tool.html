@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>KV 延展工具 · AI素材工厂</title>
+  <script src="https://cdn.jsdelivr.net/npm/psd@3.4.0/dist/psd.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -271,10 +272,10 @@
     <div class="panel">
       <h3>📎 上传原始 KV</h3>
       <div class="upload-zone" id="uploadZone">
-        <input type="file" id="kvInput" accept="image/*" />
+        <input type="file" id="kvInput" accept="image/*,.psd" />
         <div class="upload-icon">🖼️</div>
         <div class="upload-text">点击或拖拽上传 KV 主视觉</div>
-        <div class="upload-hint">支持 PNG / JPG / WEBP，建议高清大图</div>
+        <div class="upload-hint">支持 PNG / JPG / WEBP / PSD，建议高清大图</div>
       </div>
 
       <h3>📐 选择延展尺寸</h3>
@@ -448,23 +449,55 @@
 
     // ============ 图片上传 ============
     let kvImage = null;
-    document.getElementById('kvInput').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(ev) {
-        const img = new Image();
-        img.onload = function() {
-          kvImage = img;
-          const zone = document.getElementById('uploadZone');
-          zone.classList.add('has-image');
-          zone.innerHTML = `<img src="${ev.target.result}" alt="KV预览"><input type="file" id="kvInput" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" />`;
-          document.getElementById('kvInput').addEventListener('change', arguments.callee.caller);
-        };
-        img.src = ev.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
+
+    function bindKvInput() {
+      document.getElementById('kvInput').addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const zone = document.getElementById('uploadZone');
+        const isPSD = file.name.toLowerCase().endsWith('.psd');
+
+        if (isPSD) {
+          // PSD 解析
+          zone.innerHTML = `<div style="color:rgba(255,255,255,0.5);font-size:13px;">⏳ 正在解析 PSD，请稍候...</div>`;
+          try {
+            const arrayBuffer = await file.arrayBuffer();
+            const psd = await PSD.fromArrayBuffer(arrayBuffer);
+            psd.parse();
+            const canvas = psd.image.toPng();  // 合并所有图层为 PNG canvas
+            const img = new Image();
+            img.onload = function() {
+              kvImage = img;
+              zone.classList.add('has-image');
+              zone.innerHTML = `<img src="${canvas.toDataURL()}" alt="KV预览"><input type="file" id="kvInput" accept="image/*,.psd" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" />`;
+              bindKvInput();
+            };
+            img.src = canvas.toDataURL();
+          } catch(err) {
+            zone.innerHTML = `<div style="color:#f87171;font-size:13px;">❌ PSD 解析失败：${err.message}<br><span style="font-size:11px;color:rgba(255,255,255,0.3)">请尝试将 PSD 另存为 PNG 后上传</span></div>`;
+            setTimeout(() => {
+              zone.innerHTML = `<input type="file" id="kvInput" accept="image/*,.psd" /><div class="upload-icon">🖼️</div><div class="upload-text">点击或拖拽上传 KV 主视觉</div><div class="upload-hint">支持 PNG / JPG / WEBP / PSD，建议高清大图</div>`;
+              bindKvInput();
+            }, 3000);
+          }
+        } else {
+          // 普通图片
+          const reader = new FileReader();
+          reader.onload = function(ev) {
+            const img = new Image();
+            img.onload = function() {
+              kvImage = img;
+              zone.classList.add('has-image');
+              zone.innerHTML = `<img src="${ev.target.result}" alt="KV预览"><input type="file" id="kvInput" accept="image/*,.psd" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" />`;
+              bindKvInput();
+            };
+            img.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+    bindKvInput();
 
     // ============ 生成逻辑 ============
     let generatedCanvases = {};

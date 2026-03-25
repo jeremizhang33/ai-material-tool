@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>KV 延展工具 · AI素材工厂</title>
-  <script src="https://cdn.jsdelivr.net/npm/psd@3.4.0/dist/psd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ag-psd@30.1.0/dist/bundle.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -458,13 +458,15 @@
         const isPSD = file.name.toLowerCase().endsWith('.psd');
 
         if (isPSD) {
-          // PSD 解析
+          // PSD 解析（使用 ag-psd）
           zone.innerHTML = `<div style="color:rgba(255,255,255,0.5);font-size:13px;">⏳ 正在解析 PSD，请稍候...</div>`;
           try {
             const arrayBuffer = await file.arrayBuffer();
-            const psd = await PSD.fromArrayBuffer(arrayBuffer);
-            psd.parse();
-            const canvas = psd.image.toPng();  // 合并所有图层为 PNG canvas
+            // ag-psd 需要先初始化 canvas 工厂
+            agPsd.initializeCanvas(document.createElement.bind(document));
+            const psd = agPsd.readPsd(arrayBuffer, { compositeOnly: true, skipLayerImageData: true });
+            const canvas = psd.canvas;
+            if (!canvas) throw new Error('无法读取 PSD 合成图层，请确认文件完整');
             const img = new Image();
             img.onload = function() {
               kvImage = img;

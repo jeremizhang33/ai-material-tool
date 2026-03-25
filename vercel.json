@@ -8,6 +8,26 @@
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "app.js"
+    },
+    {
+      "src": "/kv-tool.html",
+      "dest": "app.js"
+    },
+    {
+      "src": "/video-composer.html",
+      "dest": "app.js"
+    },
+    {
+      "src": "/index.html",
+      "dest": "app.js"
+    },
+    {
+      "src": "/",
+      "dest": "app.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "app.js"
     }

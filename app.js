@@ -13,6 +13,17 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
+// 根路径跳转到首页
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+app.get('/kv-tool.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'kv-tool.html'));
+});
+app.get('/video-composer.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'video-composer.html'));
+});
+
 // 创建上传和输出目录
 const uploadDir = path.join('/tmp', 'uploads');
 const outputDir = path.join('/tmp', 'outputs');

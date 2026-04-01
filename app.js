@@ -26,6 +26,9 @@ app.get('/material-composer.html', (req, res) => {
 app.get('/video-composer.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'video-composer.html'));
 });
+// 兼容旧链接
+app.get('/kv.html', (req, res) => { res.redirect(301, '/kv-tool.html'); });
+app.get('/video.html', (req, res) => { res.redirect(301, '/video-composer.html'); });
 
 // 创建上传和输出目录
 const uploadDir = path.join('/tmp', 'uploads');

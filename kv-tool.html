@@ -526,34 +526,39 @@
         const isPSB = file.name.toLowerCase().endsWith('.psb');
 
         if (isPSD || isPSB) {
-          // PSD/PSB 解析（使用 ag-psd）
-          zone.innerHTML = `<div style="color:rgba(255,255,255,0.5);font-size:13px;">⏳ 正在解析 PSD，请稍候...</div>`;
+          // PSD/PSB 解析（使用 @webtoon/psd，支持 PSB 大文件格式）
+          zone.innerHTML = `<div style="color:rgba(255,255,255,0.5);font-size:13px;">⏳ 正在解析 ${isPSB ? 'PSB' : 'PSD'}，请稍候（大文件可能需要数秒）...</div>`;
           try {
             const arrayBuffer = await file.arrayBuffer();
-            // ag-psd 需要先初始化 canvas 工厂，传入创建 canvas 的函数
-            agPsd.initializeCanvas((width, height) => {
-              const c = document.createElement('canvas');
-              c.width = width;
-              c.height = height;
-              return c;
-            });
-            const psd = agPsd.readPsd(arrayBuffer, { compositeOnly: true, skipLayerImageData: true });
-            const canvas = psd.canvas;
-            if (!canvas) throw new Error('无法读取 PSD 合成图层，请确认文件完整');
+            // 动态导入 @webtoon/psd（支持 PSD + PSB）
+            const WebtoonPsd = await import('https://esm.sh/@webtoon/psd');
+            const PsdParser = WebtoonPsd.default || WebtoonPsd;
+            const psdFile = PsdParser.parse(arrayBuffer);
+            // 获取合成图像像素数据
+            const compositeBuffer = await psdFile.composite();
+            if (!compositeBuffer || compositeBuffer.length === 0) throw new Error('无法读取合成图层，请确认文件以"最大兼容性"模式保存');
+            // 将 RGBA 像素数据绘制到 canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = psdFile.width;
+            canvas.height = psdFile.height;
+            const ctx = canvas.getContext('2d');
+            const imageData = new ImageData(compositeBuffer, psdFile.width, psdFile.height);
+            ctx.putImageData(imageData, 0, 0);
+            const dataUrl = canvas.toDataURL();
             const img = new Image();
             img.onload = function() {
               kvImage = img;
               zone.classList.add('has-image');
-              zone.innerHTML = `<img src="${canvas.toDataURL()}" alt="KV预览"><input type="file" id="kvInput" accept="image/*,.psd,.psb" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" />`;
+              zone.innerHTML = `<img src="${dataUrl}" alt="KV预览"><input type="file" id="kvInput" accept="image/*,.psd,.psb" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" />`;
               bindKvInput();
             };
-            img.src = canvas.toDataURL();
+            img.src = dataUrl;
           } catch(err) {
-            zone.innerHTML = `<div style="color:#f87171;font-size:13px;">❌ PSD 解析失败：${err.message}<br><span style="font-size:11px;color:rgba(255,255,255,0.3)">请尝试将 PSD 另存为 PNG 后上传</span></div>`;
+            zone.innerHTML = `<div style="color:#f87171;font-size:13px;">❌ ${isPSB ? 'PSB' : 'PSD'} 解析失败：${err.message}<br><span style="font-size:11px;color:rgba(255,255,255,0.3)">请确认文件以"最大兼容性"模式保存，或尝试另存为 PNG 后上传</span></div>`;
             setTimeout(() => {
               zone.innerHTML = `<input type="file" id="kvInput" accept="image/*,.psd,.psb" /><div class="upload-icon">🖼️</div><div class="upload-text">点击或拖拽上传 KV 主视觉</div><div class="upload-hint">支持 PNG / JPG / WEBP / PSD / PSB，建议高清大图</div>`;
               bindKvInput();
-            }, 3000);
+            }, 5000);
           }
         } else {
           // 普通图片
@@ -965,4 +970,4 @@
     initSizeGroups();
   </script>
 </body>
-</html>
+</html>

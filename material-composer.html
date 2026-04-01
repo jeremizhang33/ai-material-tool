@@ -588,21 +588,24 @@
       const isPSB = file.name.toLowerCase().endsWith('.psb');
 
       if (isPSD || isPSB) {
-        // PSD/PSB 解析
+        // PSD/PSB 解析（使用 @webtoon/psd，支持 PSB 大文件格式）
         const zoneMap = { kv: 'zoneKV', screenshot: 'zoneScreenshot', character: 'zoneCharacter', logo: 'zoneLogo', frame: 'zoneFrame' };
         const zone = document.getElementById(zoneMap[layerName]);
-        if (zone) zone.innerHTML = `<button class="clear-btn" onclick="clearUpload(event,'${layerName}')" title="清除">×</button><input type="file" accept="image/*,.psd,.psb" onchange="handleUpload(this,'${layerName}')" /><div style="color:rgba(255,255,255,0.5);font-size:12px;padding:16px;">⏳ 解析 ${isPSB ? 'PSB' : 'PSD'} 中...</div>`;
-        file.arrayBuffer().then(arrayBuffer => {
+        if (zone) zone.innerHTML = `<button class="clear-btn" onclick="clearUpload(event,'${layerName}')" title="清除">×</button><input type="file" accept="image/*,.psd,.psb" onchange="handleUpload(this,'${layerName}')" /><div style="color:rgba(255,255,255,0.5);font-size:12px;padding:16px;">⏳ 解析 ${isPSB ? 'PSB' : 'PSD'} 中（大文件可能需要数秒）...</div>`;
+        file.arrayBuffer().then(async (arrayBuffer) => {
           try {
-            agPsd.initializeCanvas((width, height) => {
-              const c = document.createElement('canvas');
-              c.width = width;
-              c.height = height;
-              return c;
-            });
-            const psd = agPsd.readPsd(arrayBuffer, { compositeOnly: true, skipLayerImageData: true });
-            const canvas = psd.canvas;
-            if (!canvas) throw new Error('无法读取合成图层');
+            // 动态导入 @webtoon/psd（支持 PSD + PSB）
+            const WebtoonPsd = await import('https://esm.sh/@webtoon/psd');
+            const PsdParser = WebtoonPsd.default || WebtoonPsd;
+            const psdFile = PsdParser.parse(arrayBuffer);
+            const compositeBuffer = await psdFile.composite();
+            if (!compositeBuffer || compositeBuffer.length === 0) throw new Error('无法读取合成图层，请确认文件以"最大兼容性"模式保存');
+            const canvas = document.createElement('canvas');
+            canvas.width = psdFile.width;
+            canvas.height = psdFile.height;
+            const ctx = canvas.getContext('2d');
+            const imageData = new ImageData(compositeBuffer, psdFile.width, psdFile.height);
+            ctx.putImageData(imageData, 0, 0);
             const dataUrl = canvas.toDataURL();
             const img = new Image();
             img.onload = function() {
@@ -616,7 +619,7 @@
             };
             img.src = dataUrl;
           } catch(err) {
-            alert(`PSD/PSB 解析失败: ${err.message}\n请尝试另存为 PNG 后上传`);
+            alert(`${isPSB ? 'PSB' : 'PSD'} 解析失败: ${err.message}\n请确认文件以"最大兼容性"模式保存，或尝试另存为 PNG 后上传`);
             if (zone) {
               zone.classList.remove('has-image');
               const iconMap = { kv: '🏔️', screenshot: '📱', character: '🧑‍🎤', logo: '🏷️', frame: '📤' };

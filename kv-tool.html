@@ -258,6 +258,22 @@
       justify-content: space-between;
       margin-bottom: 8px;
     }
+    .format-selector { display: flex; flex-direction: column; gap: 4px; }
+    .format-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .format-option:hover { background: rgba(255,255,255,0.07); }
+    .format-option.selected { background: rgba(167,139,250,0.12); border-color: rgba(167,139,250,0.4); }
+    .format-option input[type=checkbox] { accent-color: #a78bfa; width: 15px; height: 15px; flex-shrink: 0; }
+    .format-desc { font-size: 11px; color: rgba(255,255,255,0.35); }
   </style>
 </head>
 <body>
@@ -272,10 +288,10 @@
     <div class="panel">
       <h3>📎 上传原始 KV</h3>
       <div class="upload-zone" id="uploadZone">
-        <input type="file" id="kvInput" accept="image/*,.psd" />
+        <input type="file" id="kvInput" accept="image/*,.psd,.psb" />
         <div class="upload-icon">🖼️</div>
         <div class="upload-text">点击或拖拽上传 KV 主视觉</div>
-        <div class="upload-hint">支持 PNG / JPG / WEBP / PSD，建议高清大图</div>
+        <div class="upload-hint">支持 PNG / JPG / WEBP / PSD / PSB，建议高清大图</div>
       </div>
 
       <h3>📐 选择延展尺寸</h3>
@@ -329,6 +345,23 @@
         <div class="form-label">详细说明（回流推荐图用）</div>
         <textarea id="detail" rows="2" placeholder="例：回归即送专属皮肤，限时7天有效"></textarea>
       </div>
+
+      <h3>📦 输出格式</h3>
+      <div class="format-selector">
+        <label class="format-option selected">
+          <input type="checkbox" value="png" checked onchange="updateFormatStyle(this)" /> PNG
+          <span class="format-desc">无损·透明</span>
+        </label>
+        <label class="format-option">
+          <input type="checkbox" value="jpg" onchange="updateFormatStyle(this)" /> JPG
+          <span class="format-desc">体积小</span>
+        </label>
+        <label class="format-option">
+          <input type="checkbox" value="psd" onchange="updateFormatStyle(this)" /> PSD
+          <span class="format-desc">分层·可编辑</span>
+        </label>
+      </div>
+      <div class="rule-tip" style="margin-bottom:8px;">💡 PSD 格式会保留背景层和文字层，方便后期在 Photoshop 中微调</div>
 
       <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
       <div class="status-msg" id="statusMsg"></div>
@@ -390,6 +423,40 @@
           { id: 'banner', name: 'Banner图', w: 4320, h: 1080, textMode: 'none' },
           { id: 'iae_h', name: 'IAE卡片·横屏', w: 3840, h: 2160, textMode: 'none' },
           { id: 'iae_v', name: 'IAE卡片·竖屏', w: 2160, h: 3840, textMode: 'none' },
+        ]
+      },
+      {
+        group: 'PC官网',
+        noText: false,
+        items: [
+          { id: 'pc_web_banner', name: '官网Banner', w: 1068, h: 498, textMode: 'none', format: 'jpeg' },
+          { id: 'pc_web_article', name: '官网文章资讯封面', w: 1920, h: 1080, textMode: 'none', format: 'jpeg' },
+          { id: 'pc_web_video', name: '官网视频封面', w: 1920, h: 1080, textMode: 'none', format: 'jpeg' },
+        ]
+      },
+      {
+        group: 'PC官包',
+        noText: false,
+        items: [
+          { id: 'pc_pkg_banner', name: '官包Banner', w: 580, h: 234, textMode: 'kv-text', format: 'png' },
+          { id: 'pc_pkg_timeline', name: '官包时间轴', w: 208, h: 104, textMode: 'none', format: 'png' },
+          { id: 'pc_pkg_face', name: '官包端外拍脸', w: 910, h: 580, textMode: 'none', format: 'png' },
+        ]
+      },
+      {
+        group: 'PC WeGame',
+        noText: false,
+        items: [
+          { id: 'pc_wg_banner', name: 'WeGame Banner', w: 1160, h: 396, textMode: 'none', format: 'jpeg' },
+          { id: 'pc_wg_face', name: 'WeGame端外拍脸', w: 1570, h: 868, textMode: 'none', format: 'jpeg' },
+        ]
+      },
+      {
+        group: 'PC端内拍脸',
+        noText: false,
+        items: [
+          { id: 'pc_ingame_face_pc', name: '端内拍脸·PC', w: 2560, h: 1440, textMode: 'none', format: 'png' },
+          { id: 'pc_ingame_face_mobile', name: '端内拍脸·移动', w: 1080, h: 639, textMode: 'none', format: 'png' },
         ]
       }
     ];
@@ -456,9 +523,10 @@
         if (!file) return;
         const zone = document.getElementById('uploadZone');
         const isPSD = file.name.toLowerCase().endsWith('.psd');
+        const isPSB = file.name.toLowerCase().endsWith('.psb');
 
-        if (isPSD) {
-          // PSD 解析（使用 ag-psd）
+        if (isPSD || isPSB) {
+          // PSD/PSB 解析（使用 ag-psd）
           zone.innerHTML = `<div style="color:rgba(255,255,255,0.5);font-size:13px;">⏳ 正在解析 PSD，请稍候...</div>`;
           try {
             const arrayBuffer = await file.arrayBuffer();
@@ -476,14 +544,14 @@
             img.onload = function() {
               kvImage = img;
               zone.classList.add('has-image');
-              zone.innerHTML = `<img src="${canvas.toDataURL()}" alt="KV预览"><input type="file" id="kvInput" accept="image/*,.psd" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" />`;
+              zone.innerHTML = `<img src="${canvas.toDataURL()}" alt="KV预览"><input type="file" id="kvInput" accept="image/*,.psd,.psb" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" />`;
               bindKvInput();
             };
             img.src = canvas.toDataURL();
           } catch(err) {
             zone.innerHTML = `<div style="color:#f87171;font-size:13px;">❌ PSD 解析失败：${err.message}<br><span style="font-size:11px;color:rgba(255,255,255,0.3)">请尝试将 PSD 另存为 PNG 后上传</span></div>`;
             setTimeout(() => {
-              zone.innerHTML = `<input type="file" id="kvInput" accept="image/*,.psd" /><div class="upload-icon">🖼️</div><div class="upload-text">点击或拖拽上传 KV 主视觉</div><div class="upload-hint">支持 PNG / JPG / WEBP / PSD，建议高清大图</div>`;
+              zone.innerHTML = `<input type="file" id="kvInput" accept="image/*,.psd,.psb" /><div class="upload-icon">🖼️</div><div class="upload-text">点击或拖拽上传 KV 主视觉</div><div class="upload-hint">支持 PNG / JPG / WEBP / PSD / PSB，建议高清大图</div>`;
               bindKvInput();
             }, 3000);
           }
@@ -495,7 +563,7 @@
             img.onload = function() {
               kvImage = img;
               zone.classList.add('has-image');
-              zone.innerHTML = `<img src="${ev.target.result}" alt="KV预览"><input type="file" id="kvInput" accept="image/*,.psd" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" />`;
+              zone.innerHTML = `<img src="${ev.target.result}" alt="KV预览"><input type="file" id="kvInput" accept="image/*,.psd,.psb" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" />`;
               bindKvInput();
             };
             img.src = ev.target.result;
@@ -764,24 +832,132 @@
       ctx.restore();
     }
 
+    // ============ 输出格式选择 ============
+    function updateFormatStyle(checkbox) {
+      const option = checkbox.closest('.format-option');
+      if (checkbox.checked) option.classList.add('selected');
+      else option.classList.remove('selected');
+      // 至少保留一个格式
+      const checked = document.querySelectorAll('.format-option input:checked');
+      if (checked.length === 0) {
+        checkbox.checked = true;
+        option.classList.add('selected');
+      }
+    }
+
+    function getSelectedFormats() {
+      return Array.from(document.querySelectorAll('.format-option input:checked')).map(cb => cb.value);
+    }
+
     // ============ 下载 ============
-    function downloadSingle(id) {
+    function downloadSingleFormat(id, format) {
       const item = generatedCanvases[id];
       if (!item) return;
       const { canvas, spec } = item;
-      const format = spec.format || 'png';
-      const quality = format === 'png' ? undefined : 0.92;
-      canvas.toBlob(blob => {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `KV延展_${spec.name}_${spec.w}x${spec.h}.${format}`;
-        a.click();
-      }, `image/${format}`, quality);
+
+      if (format === 'psd') {
+        // PSD 分层导出（使用 ag-psd）
+        try {
+          agPsd.initializeCanvas((width, height) => {
+            const c = document.createElement('canvas');
+            c.width = width;
+            c.height = height;
+            return c;
+          });
+
+          // 构建 PSD 文档对象
+          const psdDoc = {
+            width: spec.w,
+            height: spec.h,
+            children: []
+          };
+
+          // 背景层：KV 图片
+          const bgCanvas = document.createElement('canvas');
+          bgCanvas.width = spec.w;
+          bgCanvas.height = spec.h;
+          const bgCtx = bgCanvas.getContext('2d');
+          drawKVFit(bgCtx, kvImage, spec.w, spec.h);
+          psdDoc.children.push({
+            name: '背景 - KV',
+            canvas: bgCanvas,
+            top: 0,
+            left: 0,
+            blendMode: 'normal',
+            opacity: 1,
+          });
+
+          // 文字层（如果有文字叠加）
+          if (spec.textMode !== 'none') {
+            const textCanvas = document.createElement('canvas');
+            textCanvas.width = spec.w;
+            textCanvas.height = spec.h;
+            const textCtx = textCanvas.getContext('2d');
+            const mainTitle = document.getElementById('mainTitle').value;
+            const subTitle = document.getElementById('subTitle').value;
+            const feature = document.getElementById('feature').value;
+            const detail = document.getElementById('detail').value;
+            const scrollEnabled = document.getElementById('scrollToggle').checked;
+            const scrollConfig = {
+              enabled: scrollEnabled,
+              text: subTitle,
+              textColor: document.getElementById('scrollTextColor').value,
+              bgColor: document.getElementById('scrollBgColor').value,
+              borderColor: document.getElementById('scrollBorderColor').value,
+              posY: parseFloat(document.getElementById('scrollPosY').value),
+            };
+            drawTextOverlay(textCtx, spec, mainTitle, subTitle, feature, detail, scrollConfig);
+            psdDoc.children.push({
+              name: '文字层',
+              canvas: textCanvas,
+              top: 0,
+              left: 0,
+              blendMode: 'normal',
+              opacity: 1,
+            });
+          }
+
+          const psdBuffer = agPsd.writePsd(psdDoc);
+          const blob = new Blob([psdBuffer], { type: 'application/octet-stream' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = `KV延展_${spec.name}_${spec.w}x${spec.h}.psd`;
+          a.click();
+        } catch(err) {
+          console.error('PSD 导出失败:', err);
+          alert(`PSD 导出失败: ${err.message}\n将自动改为 PNG 下载`);
+          downloadSingleFormat(id, 'png');
+        }
+      } else {
+        // PNG/JPG 导出
+        const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+        const quality = format === 'jpg' ? 0.92 : undefined;
+        canvas.toBlob(blob => {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = `KV延展_${spec.name}_${spec.w}x${spec.h}.${format}`;
+          a.click();
+        }, mime, quality);
+      }
+    }
+
+    function downloadSingle(id) {
+      // 按选中的格式逐个下载
+      const formats = getSelectedFormats();
+      formats.forEach((format, j) => {
+        setTimeout(() => downloadSingleFormat(id, format), j * 150);
+      });
     }
 
     function downloadAll() {
-      Object.keys(generatedCanvases).forEach((id, i) => {
-        setTimeout(() => downloadSingle(id), i * 300);
+      const formats = getSelectedFormats();
+      const ids = Object.keys(generatedCanvases);
+      let delay = 0;
+      ids.forEach((id) => {
+        formats.forEach((format) => {
+          setTimeout(() => downloadSingleFormat(id, format), delay);
+          delay += 300;
+        });
       });
     }
 

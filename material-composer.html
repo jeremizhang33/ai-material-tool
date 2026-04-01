@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>卖点图组合工具 · AI素材工厂</title>
+  <script src="https://cdn.jsdelivr.net/npm/ag-psd@30.1.0/dist/bundle.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #0f1117;
+      min-height: 100vh;
+      color: #e2e8f0;
+    }
+    header {
+      background: rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header a { color: rgba(255,255,255,0.4); font-size: 13px; text-decoration: none; }
+    header a:hover { color: #fff; }
+    header .sep { color: rgba(255,255,255,0.2); }
+    header .title { font-size: 15px; font-weight: 600; color: #34d399; }
+    .main { display: flex; gap: 0; min-height: calc(100vh - 57px); }
+
+    /* 左侧控制面板 */
+    .panel {
+      width: 380px;
+      min-width: 380px;
+      background: rgba(255,255,255,0.03);
+      border-right: 1px solid rgba(255,255,255,0.08);
+      padding: 24px 20px;
+      overflow-y: auto;
+      max-height: calc(100vh - 57px);
+    }
+    .panel h3 {
+      font-size: 12px;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .panel h3:first-child { margin-top: 0; }
+
+    /* 上传区域 */
+    .upload-zone {
+      border: 2px dashed rgba(52,211,153,0.35);
+      border-radius: 12px;
+      padding: 20px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(52,211,153,0.04);
+      position: relative;
+      margin-bottom: 10px;
+    }
+    .upload-zone:hover { border-color: rgba(52,211,153,0.7); background: rgba(52,211,153,0.08); }
+    .upload-zone.has-image { padding: 0; border-style: solid; border-color: rgba(52,211,153,0.4); }
+    .upload-zone img { width: 100%; border-radius: 10px; display: block; max-height: 140px; object-fit: contain; }
+    .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .upload-icon { font-size: 28px; margin-bottom: 6px; }
+    .upload-text { font-size: 12px; color: rgba(255,255,255,0.45); }
+    .upload-hint { font-size: 10px; color: rgba(255,255,255,0.25); margin-top: 4px; }
+    .upload-zone.secondary { border-color: rgba(167,139,250,0.35); background: rgba(167,139,250,0.04); }
+    .upload-zone.secondary:hover { border-color: rgba(167,139,250,0.7); background: rgba(167,139,250,0.08); }
+    .upload-zone.secondary.has-image { border-color: rgba(167,139,250,0.4); }
+    .upload-zone.tertiary { border-color: rgba(251,146,60,0.35); background: rgba(251,146,60,0.04); }
+    .upload-zone.tertiary:hover { border-color: rgba(251,146,60,0.7); background: rgba(251,146,60,0.08); }
+    .upload-zone.tertiary.has-image { border-color: rgba(251,146,60,0.4); }
+
+    .clear-btn {
+      position: absolute; top: 6px; right: 6px; z-index: 10;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: rgba(239,68,68,0.8); border: none; color: #fff;
+      font-size: 14px; cursor: pointer; display: none;
+      align-items: center; justify-content: center; line-height: 1;
+    }
+    .upload-zone.has-image .clear-btn { display: flex; }
+
+    /* 表单 */
+    .form-item { margin-bottom: 12px; }
+    .form-label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    input[type=text], textarea, select {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: #e2e8f0;
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    input[type=text]:focus, textarea:focus { border-color: rgba(52,211,153,0.6); }
+    select option { background: #1e1b4b; }
+
+    /* 滑块 */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .slider-row label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      width: 80px;
+      flex-shrink: 0;
+    }
+    .slider-row input[type=range] {
+      flex: 1;
+      accent-color: #34d399;
+    }
+    .slider-row .val {
+      font-size: 11px;
+      color: rgba(255,255,255,0.5);
+      width: 40px;
+      text-align: right;
+    }
+
+    /* 输出规格 */
+    .spec-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .spec-tab {
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      color: rgba(255,255,255,0.6);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .spec-tab:hover { background: rgba(255,255,255,0.08); }
+    .spec-tab.active {
+      background: rgba(52,211,153,0.15);
+      border-color: rgba(52,211,153,0.5);
+      color: #6ee7b7;
+    }
+
+    /* 按钮 */
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #059669, #10b981);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(16,185,129,0.4);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(16,185,129,0.5); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.7);
+    }
+    .btn-outline:hover { background: rgba(255,255,255,0.06); }
+
+    /* 右侧预览区 */
+    .preview-area {
+      flex: 1;
+      padding: 24px 28px;
+      overflow-y: auto;
+      background: #0f1117;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 900px;
+    }
+    .preview-header h2 { font-size: 16px; font-weight: 600; }
+    .preview-info {
+      font-size: 11px;
+      color: rgba(255,255,255,0.35);
+      background: rgba(255,255,255,0.06);
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+    .preview-container {
+      background: repeating-conic-gradient(rgba(255,255,255,0.04) 0% 25%, transparent 0% 50%) 50%/20px 20px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      max-width: 900px;
+      width: 100%;
+      position: relative;
+    }
+    .preview-container canvas {
+      max-width: 100%;
+      max-height: calc(100vh - 160px);
+    }
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 500px;
+      opacity: 0.3;
+    }
+    .empty-state .icon { font-size: 56px; margin-bottom: 14px; }
+    .empty-state p { font-size: 13px; }
+
+    /* 图层面板 */
+    .layer-list { display: flex; flex-direction: column; gap: 6px; }
+    .layer-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 12px;
+    }
+    .layer-item .dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .layer-item .name { flex: 1; color: rgba(255,255,255,0.7); }
+    .layer-item .status {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .layer-item .status.ready { background: rgba(52,211,153,0.15); color: #6ee7b7; }
+    .layer-item .status.empty { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.3); }
+
+    /* 边框模板选择 */
+    .frame-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .frame-option {
+      aspect-ratio: 3/4;
+      border-radius: 8px;
+      border: 2px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 8px 4px;
+    }
+    .frame-option:hover { border-color: rgba(255,255,255,0.2); }
+    .frame-option.active { border-color: rgba(52,211,153,0.6); background: rgba(52,211,153,0.08); }
+    .frame-option .icon { font-size: 20px; }
+    .frame-option .label { font-size: 9px; color: rgba(255,255,255,0.4); text-align: center; }
+
+    .section-divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      margin: 16px 0 8px;
+    }
+
+    /* 下载按钮行 */
+    .download-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+      width: 100%;
+      max-width: 900px;
+    }
+    .download-row .btn { flex: 1; }
+
+    /* 输出格式选择 */
+    .format-selector { display: flex; gap: 6px; margin-bottom: 10px; }
+    .format-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 12px;
+    }
+    .format-option:hover { background: rgba(255,255,255,0.07); }
+    .format-option.selected { background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.4); }
+    .format-option input[type=checkbox] { accent-color: #34d399; width: 14px; height: 14px; flex-shrink: 0; }
+    .format-desc { font-size: 10px; color: rgba(255,255,255,0.35); }
+    .format-tip {
+      font-size: 10px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      background: rgba(251,146,60,0.1);
+      border: 1px solid rgba(251,146,60,0.2);
+      color: #fdba74;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/">← 工具箱首页</a>
+    <span class="sep">/</span>
+    <span class="title">🎨 卖点图组合工具</span>
+  </header>
+
+  <div class="main">
+    <!-- 左侧控制面板 -->
+    <div class="panel">
+      <h3>📐 输出规格</h3>
+      <div class="spec-tabs" id="specTabs">
+        <div class="spec-tab active" data-spec="selling" onclick="switchSpec(this)">卖点图 9:16</div>
+        <div class="spec-tab" data-spec="today" onclick="switchSpec(this)">Today 16:9</div>
+        <div class="spec-tab" data-spec="banner" onclick="switchSpec(this)">Banner 4:1</div>
+        <div class="spec-tab" data-spec="iae_h" onclick="switchSpec(this)">IAE 横屏</div>
+        <div class="spec-tab" data-spec="iae_v" onclick="switchSpec(this)">IAE 竖屏</div>
+      </div>
+
+      <h3>🖼️ 图层素材</h3>
+
+      <!-- 图层1: 主KV背景 -->
+      <div class="upload-zone" id="zoneKV">
+        <button class="clear-btn" onclick="clearUpload(event,'kv')" title="清除">×</button>
+        <input type="file" accept="image/*,.psd,.psb" onchange="handleUpload(this,'kv')" />
+        <div class="upload-icon">🏔️</div>
+        <div class="upload-text">① 上传主KV（作为背景）</div>
+        <div class="upload-hint">必选 · 支持 PNG/JPG/PSD/PSB</div>
+      </div>
+
+      <!-- 图层2: 实机截图 -->
+      <div class="upload-zone secondary" id="zoneScreenshot">
+        <button class="clear-btn" onclick="clearUpload(event,'screenshot')" title="清除">×</button>
+        <input type="file" accept="image/*,.psd,.psb" onchange="handleUpload(this,'screenshot')" />
+        <div class="upload-icon">📱</div>
+        <div class="upload-text">② 上传实机截图</div>
+        <div class="upload-hint">可选 · 支持 PNG/JPG/PSD/PSB</div>
+      </div>
+
+      <!-- 图层3: 人物立绘 -->
+      <div class="upload-zone tertiary" id="zoneCharacter">
+        <button class="clear-btn" onclick="clearUpload(event,'character')" title="清除">×</button>
+        <input type="file" accept="image/*,.psd,.psb" onchange="handleUpload(this,'character')" />
+        <div class="upload-icon">🧑‍🎤</div>
+        <div class="upload-text">③ 上传人物立绘</div>
+        <div class="upload-hint">可选 · 建议PNG透明底，支持PSD/PSB</div>
+      </div>
+
+      <!-- 图层4: Logo -->
+      <div class="upload-zone" id="zoneLogo" style="border-color:rgba(96,165,250,0.35);background:rgba(96,165,250,0.04);">
+        <button class="clear-btn" onclick="clearUpload(event,'logo')" title="清除">×</button>
+        <input type="file" accept="image/*,.psd,.psb" onchange="handleUpload(this,'logo')" />
+        <div class="upload-icon">🏷️</div>
+        <div class="upload-text">④ 上传Logo</div>
+        <div class="upload-hint">可选 · PNG透明底，支持PSD/PSB</div>
+      </div>
+
+      <hr class="section-divider" />
+
+      <h3>🖼️ 边框样式</h3>
+      <div class="frame-grid" id="frameGrid">
+        <div class="frame-option active" data-frame="none" onclick="selectFrame(this)">
+          <div class="icon">⬜</div>
+          <div class="label">无边框</div>
+        </div>
+        <div class="frame-option" data-frame="gold" onclick="selectFrame(this)">
+          <div class="icon">🟡</div>
+          <div class="label">金色古风</div>
+        </div>
+        <div class="frame-option" data-frame="tech" onclick="selectFrame(this)">
+          <div class="icon">🔵</div>
+          <div class="label">科技蓝</div>
+        </div>
+        <div class="frame-option" data-frame="neon" onclick="selectFrame(this)">
+          <div class="icon">🟣</div>
+          <div class="label">赛博霓虹</div>
+        </div>
+        <div class="frame-option" data-frame="simple" onclick="selectFrame(this)">
+          <div class="icon">⬛</div>
+          <div class="label">简约白框</div>
+        </div>
+        <div class="frame-option" data-frame="custom" onclick="selectFrame(this)">
+          <div class="icon">📤</div>
+          <div class="label">自定义上传</div>
+        </div>
+      </div>
+      <div id="customFrameUpload" style="display:none;">
+        <div class="upload-zone secondary" id="zoneFrame" style="padding:14px;">
+          <button class="clear-btn" onclick="clearUpload(event,'frame')" title="清除">×</button>
+          <input type="file" accept="image/*" onchange="handleUpload(this,'frame')" />
+          <div class="upload-text">上传自定义边框（PNG透明底）</div>
+        </div>
+      </div>
+
+      <hr class="section-divider" />
+
+      <h3>✏️ 文案配置</h3>
+      <div class="form-item">
+        <div class="form-label">版本卖点文字（顶部）</div>
+        <input type="text" id="topText" placeholder="例：丝路敦煌 全新地图" />
+      </div>
+      <div class="form-item">
+        <div class="form-label">主标题</div>
+        <input type="text" id="mainTitle" placeholder="例：吉灯贺安 马上吃鸡" />
+      </div>
+      <div class="form-item">
+        <div class="form-label">副标题</div>
+        <input type="text" id="subTitle" placeholder="例：来和平精英，共度元宵佳节" />
+      </div>
+
+      <hr class="section-divider" />
+
+      <h3>🎛️ 图层调整</h3>
+      <div class="slider-row">
+        <label>截图大小</label>
+        <input type="range" id="ssScale" min="0.2" max="0.8" step="0.01" value="0.45" oninput="this.nextElementSibling.textContent=Math.round(this.value*100)+'%';livePreview()">
+        <span class="val">45%</span>
+      </div>
+      <div class="slider-row">
+        <label>截图X偏移</label>
+        <input type="range" id="ssOffsetX" min="-0.3" max="0.3" step="0.01" value="0.1" oninput="this.nextElementSibling.textContent=this.value;livePreview()">
+        <span class="val">0.1</span>
+      </div>
+      <div class="slider-row">
+        <label>截图Y偏移</label>
+        <input type="range" id="ssOffsetY" min="-0.3" max="0.3" step="0.01" value="-0.05" oninput="this.nextElementSibling.textContent=this.value;livePreview()">
+        <span class="val">-0.05</span>
+      </div>
+      <div class="slider-row">
+        <label>人物大小</label>
+        <input type="range" id="charScale" min="0.3" max="1.2" step="0.01" value="0.7" oninput="this.nextElementSibling.textContent=Math.round(this.value*100)+'%';livePreview()">
+        <span class="val">70%</span>
+      </div>
+      <div class="slider-row">
+        <label>人物X偏移</label>
+        <input type="range" id="charOffsetX" min="-0.5" max="0.5" step="0.01" value="-0.25" oninput="this.nextElementSibling.textContent=this.value;livePreview()">
+        <span class="val">-0.25</span>
+      </div>
+      <div class="slider-row">
+        <label>人物Y偏移</label>
+        <input type="range" id="charOffsetY" min="-0.3" max="0.3" step="0.01" value="0.05" oninput="this.nextElementSibling.textContent=this.value;livePreview()">
+        <span class="val">0.05</span>
+      </div>
+      <div class="slider-row">
+        <label>Logo大小</label>
+        <input type="range" id="logoScale" min="0.05" max="0.4" step="0.01" value="0.15" oninput="this.nextElementSibling.textContent=Math.round(this.value*100)+'%';livePreview()">
+        <span class="val">15%</span>
+      </div>
+      <div class="slider-row">
+        <label>背景模糊</label>
+        <input type="range" id="bgBlur" min="0" max="20" step="1" value="0" oninput="this.nextElementSibling.textContent=this.value+'px';livePreview()">
+        <span class="val">0px</span>
+      </div>
+      <div class="slider-row">
+        <label>背景暗度</label>
+        <input type="range" id="bgDarken" min="0" max="0.7" step="0.05" value="0.2" oninput="this.nextElementSibling.textContent=Math.round(this.value*100)+'%';livePreview()">
+        <span class="val">20%</span>
+      </div>
+
+      <hr class="section-divider" />
+
+      <h3>📊 图层状态</h3>
+      <div class="layer-list" id="layerList">
+        <div class="layer-item"><div class="dot" style="background:#34d399"></div><span class="name">背景(主KV)</span><span class="status empty" id="statusKV">未上传</span></div>
+        <div class="layer-item"><div class="dot" style="background:#a78bfa"></div><span class="name">实机截图</span><span class="status empty" id="statusSS">未上传</span></div>
+        <div class="layer-item"><div class="dot" style="background:#fb923c"></div><span class="name">人物立绘</span><span class="status empty" id="statusChar">未上传</span></div>
+        <div class="layer-item"><div class="dot" style="background:#60a5fa"></div><span class="name">Logo</span><span class="status empty" id="statusLogo">未上传</span></div>
+        <div class="layer-item"><div class="dot" style="background:#f472b6"></div><span class="name">边框</span><span class="status empty" id="statusFrame">无</span></div>
+        <div class="layer-item"><div class="dot" style="background:#fbbf24"></div><span class="name">文案</span><span class="status empty" id="statusText">未填写</span></div>
+      </div>
+
+      <button class="btn btn-primary" style="margin-top:16px;" onclick="livePreview()">
+        🔄 刷新预览
+      </button>
+    </div>
+
+    <!-- 右侧预览区 -->
+    <div class="preview-area">
+      <div class="preview-header">
+        <h2>实时预览</h2>
+        <span class="preview-info" id="previewInfo">卖点图 · 1080×1920</span>
+      </div>
+      <div class="preview-container" id="previewContainer">
+        <div class="empty-state" id="emptyState">
+          <div class="icon">🎨</div>
+          <p>上传素材后自动预览</p>
+        </div>
+        <canvas id="previewCanvas" style="display:none;"></canvas>
+      </div>
+      <div style="width:100%;max-width:900px;margin-top:16px;">
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:6px;">📦 输出格式（可多选）</div>
+        <div class="format-selector">
+          <label class="format-option selected">
+            <input type="checkbox" value="png" checked onchange="updateFormatStyle(this)" /> PNG
+            <span class="format-desc">无损</span>
+          </label>
+          <label class="format-option">
+            <input type="checkbox" value="jpg" onchange="updateFormatStyle(this)" /> JPG
+            <span class="format-desc">体积小</span>
+          </label>
+          <label class="format-option">
+            <input type="checkbox" value="psd" onchange="updateFormatStyle(this)" /> PSD
+            <span class="format-desc">分层</span>
+          </label>
+        </div>
+        <div class="format-tip">💡 PSD 会保留各图层（背景/截图/人物/Logo/文字），可在 Photoshop 中继续编辑</div>
+      </div>
+      <div class="download-row">
+        <button class="btn btn-primary" onclick="downloadSelected()">⬇️ 下载选中格式</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============ 输出规格 ============
+    const SPECS = {
+      selling:  { name: '卖点图', w: 1080, h: 1920, label: '卖点图 · 1080×1920' },
+      today:    { name: 'Today图', w: 5244, h: 2950, label: 'Today图 · 5244×2950' },
+      banner:   { name: 'Banner', w: 4320, h: 1080, label: 'Banner · 4320×1080' },
+      iae_h:    { name: 'IAE横屏', w: 3840, h: 2160, label: 'IAE横屏 · 3840×2160' },
+      iae_v:    { name: 'IAE竖屏', w: 2160, h: 3840, label: 'IAE竖屏 · 2160×3840' },
+    };
+    let currentSpec = 'selling';
+
+    // ============ 图层数据 ============
+    const layers = {
+      kv: null,
+      screenshot: null,
+      character: null,
+      logo: null,
+      frame: null,
+    };
+    let currentFrameStyle = 'none';
+
+    // ============ 切换输出规格 ============
+    function switchSpec(el) {
+      document.querySelectorAll('.spec-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      currentSpec = el.dataset.spec;
+      document.getElementById('previewInfo').textContent = SPECS[currentSpec].label;
+      livePreview();
+    }
+
+    // ============ 上传处理 ============
+    function handleUpload(input, layerName) {
+      const file = input.files[0];
+      if (!file) return;
+      const isPSD = file.name.toLowerCase().endsWith('.psd');
+      const isPSB = file.name.toLowerCase().endsWith('.psb');
+
+      if (isPSD || isPSB) {
+        // PSD/PSB 解析
+        const zoneMap = { kv: 'zoneKV', screenshot: 'zoneScreenshot', character: 'zoneCharacter', logo: 'zoneLogo', frame: 'zoneFrame' };
+        const zone = document.getElementById(zoneMap[layerName]);
+        if (zone) zone.innerHTML = `<button class="clear-btn" onclick="clearUpload(event,'${layerName}')" title="清除">×</button><input type="file" accept="image/*,.psd,.psb" onchange="handleUpload(this,'${layerName}')" /><div style="color:rgba(255,255,255,0.5);font-size:12px;padding:16px;">⏳ 解析 ${isPSB ? 'PSB' : 'PSD'} 中...</div>`;
+        file.arrayBuffer().then(arrayBuffer => {
+          try {
+            agPsd.initializeCanvas((width, height) => {
+              const c = document.createElement('canvas');
+              c.width = width;
+              c.height = height;
+              return c;
+            });
+            const psd = agPsd.readPsd(arrayBuffer, { compositeOnly: true, skipLayerImageData: true });
+            const canvas = psd.canvas;
+            if (!canvas) throw new Error('无法读取合成图层');
+            const dataUrl = canvas.toDataURL();
+            const img = new Image();
+            img.onload = function() {
+              layers[layerName] = img;
+              if (zone) {
+                zone.classList.add('has-image');
+                zone.innerHTML = `<button class="clear-btn" onclick="clearUpload(event,'${layerName}')" title="清除">×</button><input type="file" accept="image/*,.psd,.psb" onchange="handleUpload(this,'${layerName}')" /><img src="${dataUrl}" />`;
+              }
+              updateLayerStatus();
+              livePreview();
+            };
+            img.src = dataUrl;
+          } catch(err) {
+            alert(`PSD/PSB 解析失败: ${err.message}\n请尝试另存为 PNG 后上传`);
+            if (zone) {
+              zone.classList.remove('has-image');
+              const iconMap = { kv: '🏔️', screenshot: '📱', character: '🧑‍🎤', logo: '🏷️', frame: '📤' };
+              const textMap = { kv: '① 上传主KV（作为背景）', screenshot: '② 上传实机截图', character: '③ 上传人物立绘', logo: '④ 上传Logo', frame: '上传自定义边框（PNG透明底）' };
+              zone.innerHTML = `<button class="clear-btn" onclick="clearUpload(event,'${layerName}')" title="清除">×</button><input type="file" accept="image/*,.psd,.psb" onchange="handleUpload(this,'${layerName}')" /><div class="upload-icon">${iconMap[layerName]}</div><div class="upload-text">${textMap[layerName]}</div>`;
+            }
+          }
+        });
+      } else {
+        // 普通图片
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = new Image();
+          img.onload = function() {
+            layers[layerName] = img;
+            const zoneMap = { kv: 'zoneKV', screenshot: 'zoneScreenshot', character: 'zoneCharacter', logo: 'zoneLogo', frame: 'zoneFrame' };
+            const zone = document.getElementById(zoneMap[layerName]);
+            if (zone) {
+              zone.classList.add('has-image');
+              const existingImg = zone.querySelector('img');
+              if (existingImg) {
+                existingImg.src = e.target.result;
+              } else {
+                const preview = document.createElement('img');
+                preview.src = e.target.result;
+                const clearBtn = zone.querySelector('.clear-btn');
+                const fileInput = zone.querySelector('input[type=file]');
+                zone.innerHTML = '';
+                zone.appendChild(clearBtn);
+                zone.appendChild(fileInput);
+                zone.appendChild(preview);
+              }
+            }
+            updateLayerStatus();
+            livePreview();
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function clearUpload(event, layerName) {
+      event.stopPropagation();
+      event.preventDefault();
+      layers[layerName] = null;
+      const zoneMap = { kv: 'zoneKV', screenshot: 'zoneScreenshot', character: 'zoneCharacter', logo: 'zoneLogo', frame: 'zoneFrame' };
+      const zone = document.getElementById(zoneMap[layerName]);
+      if (zone) {
+        zone.classList.remove('has-image');
+        const iconMap = { kv: '🏔️', screenshot: '📱', character: '🧑‍🎤', logo: '🏷️', frame: '📤' };
+        const textMap = { kv: '① 上传主KV（作为背景）', screenshot: '② 上传实机截图', character: '③ 上传人物立绘', logo: '④ 上传Logo', frame: '上传自定义边框（PNG透明底）' };
+        const hintMap = { kv: '必选 · 将被裁切填充为背景', screenshot: '可选 · 放置在边框内展示', character: '可选 · 建议PNG透明底', logo: '可选 · PNG透明底，放置在顶部', frame: '' };
+        zone.innerHTML = `
+          <button class="clear-btn" onclick="clearUpload(event,'${layerName}')" title="清除">×</button>
+          <input type="file" accept="image/*" onchange="handleUpload(this,'${layerName}')" />
+          <div class="upload-icon">${iconMap[layerName]}</div>
+          <div class="upload-text">${textMap[layerName]}</div>
+          ${hintMap[layerName] ? '<div class="upload-hint">' + hintMap[layerName] + '</div>' : ''}
+        `;
+      }
+      updateLayerStatus();
+      livePreview();
+    }
+
+    // ============ 边框选择 ============
+    function selectFrame(el) {
+      document.querySelectorAll('.frame-option').forEach(f => f.classList.remove('active'));
+      el.classList.add('active');
+      currentFrameStyle = el.dataset.frame;
+      document.getElementById('customFrameUpload').style.display = currentFrameStyle === 'custom' ? 'block' : 'none';
+      updateLayerStatus();
+      livePreview();
+    }
+
+    // ============ 图层状态更新 ============
+    function updateLayerStatus() {
+      const setStatus = (id, ready, text) => {
+        const el = document.getElementById(id);
+        el.className = 'status ' + (ready ? 'ready' : 'empty');
+        el.textContent = text;
+      };
+      setStatus('statusKV', layers.kv, layers.kv ? '✓ 已上传' : '未上传');
+      setStatus('statusSS', layers.screenshot, layers.screenshot ? '✓ 已上传' : '未上传');
+      setStatus('statusChar', layers.character, layers.character ? '✓ 已上传' : '未上传');
+      setStatus('statusLogo', layers.logo, layers.logo ? '✓ 已上传' : '未上传');
+      setStatus('statusFrame', currentFrameStyle !== 'none', currentFrameStyle === 'none' ? '无' : (currentFrameStyle === 'custom' ? (layers.frame ? '✓ 自定义' : '待上传') : '✓ ' + currentFrameStyle));
+
+      const hasText = document.getElementById('mainTitle').value || document.getElementById('subTitle').value || document.getElementById('topText').value;
+      setStatus('statusText', hasText, hasText ? '✓ 已填写' : '未填写');
+    }
+
+    // ============ 绘制边框 ============
+    function drawBuiltinFrame(ctx, x, y, w, h, style) {
+      ctx.save();
+      const r = Math.min(w, h) * 0.02; // 圆角
+
+      if (style === 'gold') {
+        // 金色古风边框
+        const grad = ctx.createLinearGradient(x, y, x + w, y + h);
+        grad.addColorStop(0, '#c8860a');
+        grad.addColorStop(0.3, '#f5d06e');
+        grad.addColorStop(0.5, '#c8860a');
+        grad.addColorStop(0.7, '#f5d06e');
+        grad.addColorStop(1, '#c8860a');
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = Math.max(4, w * 0.015);
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, r);
+        ctx.stroke();
+        // 内框
+        const inset = ctx.lineWidth + 3;
+        ctx.lineWidth = Math.max(1.5, w * 0.005);
+        ctx.strokeStyle = 'rgba(245,208,110,0.5)';
+        ctx.beginPath();
+        ctx.roundRect(x + inset, y + inset, w - inset * 2, h - inset * 2, r);
+        ctx.stroke();
+        // 角装饰
+        const cs = Math.min(w, h) * 0.06;
+        ctx.fillStyle = '#f5d06e';
+        [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].forEach(([cx, cy]) => {
+          ctx.beginPath();
+          ctx.arc(cx, cy, cs / 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(cx, cy, cs / 3, 0, Math.PI * 2);
+          ctx.fillStyle = '#c8860a';
+          ctx.fill();
+          ctx.fillStyle = '#f5d06e';
+        });
+      } else if (style === 'tech') {
+        // 科技蓝边框
+        ctx.strokeStyle = '#3b82f6';
+        ctx.lineWidth = Math.max(3, w * 0.01);
+        ctx.shadowColor = '#3b82f6';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, r * 0.5);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        // 角标
+        const cs = Math.min(w, h) * 0.08;
+        ctx.lineWidth = Math.max(2, w * 0.008);
+        ctx.strokeStyle = '#60a5fa';
+        // 左上
+        ctx.beginPath(); ctx.moveTo(x, y + cs); ctx.lineTo(x, y); ctx.lineTo(x + cs, y); ctx.stroke();
+        // 右上
+        ctx.beginPath(); ctx.moveTo(x + w - cs, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + cs); ctx.stroke();
+        // 左下
+        ctx.beginPath(); ctx.moveTo(x, y + h - cs); ctx.lineTo(x, y + h); ctx.lineTo(x + cs, y + h); ctx.stroke();
+        // 右下
+        ctx.beginPath(); ctx.moveTo(x + w - cs, y + h); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w, y + h - cs); ctx.stroke();
+      } else if (style === 'neon') {
+        // 赛博霓虹
+        ctx.lineWidth = Math.max(3, w * 0.01);
+        ctx.shadowBlur = 20;
+        // 外层紫
+        ctx.strokeStyle = '#a855f7';
+        ctx.shadowColor = '#a855f7';
+        ctx.beginPath();
+        ctx.roundRect(x - 2, y - 2, w + 4, h + 4, r);
+        ctx.stroke();
+        // 内层粉
+        ctx.strokeStyle = '#ec4899';
+        ctx.shadowColor = '#ec4899';
+        ctx.lineWidth = Math.max(1.5, w * 0.005);
+        ctx.beginPath();
+        ctx.roundRect(x + 4, y + 4, w - 8, h - 8, r);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      } else if (style === 'simple') {
+        // 简约白框
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+        ctx.lineWidth = Math.max(3, w * 0.012);
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, r * 0.3);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // ============ 实时预览/生成 ============
+    let previewTimer = null;
+    function livePreview() {
+      clearTimeout(previewTimer);
+      previewTimer = setTimeout(_doPreview, 50);
+    }
+
+    function _doPreview() {
+      if (!layers.kv) {
+        document.getElementById('previewCanvas').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'flex';
+        return;
+      }
+
+      const spec = SPECS[currentSpec];
+      const canvas = document.getElementById('previewCanvas');
+      canvas.width = spec.w;
+      canvas.height = spec.h;
+      canvas.style.display = 'block';
+      document.getElementById('emptyState').style.display = 'none';
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, spec.w, spec.h);
+
+      const W = spec.w, H = spec.h;
+
+      // === 图层1: 背景(KV) ===
+      const blurVal = parseInt(document.getElementById('bgBlur').value) || 0;
+      const darkenVal = parseFloat(document.getElementById('bgDarken').value) || 0;
+
+      if (blurVal > 0) {
+        ctx.filter = `blur(${blurVal}px)`;
+      }
+      drawCover(ctx, layers.kv, 0, 0, W, H);
+      ctx.filter = 'none';
+
+      // 背景暗化
+      if (darkenVal > 0) {
+        ctx.fillStyle = `rgba(0,0,0,${darkenVal})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      // === 图层2: 实机截图 + 边框 ===
+      if (layers.screenshot) {
+        const ssScale = parseFloat(document.getElementById('ssScale').value);
+        const ssOffX = parseFloat(document.getElementById('ssOffsetX').value);
+        const ssOffY = parseFloat(document.getElementById('ssOffsetY').value);
+
+        const ssW = W * ssScale;
+        const ssAR = layers.screenshot.width / layers.screenshot.height;
+        const ssH = ssW / ssAR;
+
+        const ssX = W * 0.5 + W * ssOffX - ssW / 2;
+        const ssY = H * 0.5 + H * ssOffY - ssH / 2;
+
+        // 圆角裁剪截图
+        const radius = Math.min(ssW, ssH) * 0.02;
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(ssX, ssY, ssW, ssH, radius);
+        ctx.clip();
+        ctx.drawImage(layers.screenshot, ssX, ssY, ssW, ssH);
+        ctx.restore();
+
+        // 绘制边框
+        if (currentFrameStyle !== 'none') {
+          if (currentFrameStyle === 'custom' && layers.frame) {
+            // 自定义边框：拉伸覆盖截图区域（留边距）
+            const pad = Math.min(ssW, ssH) * 0.04;
+            ctx.drawImage(layers.frame, ssX - pad, ssY - pad, ssW + pad * 2, ssH + pad * 2);
+          } else if (currentFrameStyle !== 'custom') {
+            drawBuiltinFrame(ctx, ssX, ssY, ssW, ssH, currentFrameStyle);
+          }
+        }
+      }
+
+      // === 图层3: 人物立绘 ===
+      if (layers.character) {
+        const charScale = parseFloat(document.getElementById('charScale').value);
+        const charOffX = parseFloat(document.getElementById('charOffsetX').value);
+        const charOffY = parseFloat(document.getElementById('charOffsetY').value);
+
+        const charH = H * charScale;
+        const charAR = layers.character.width / layers.character.height;
+        const charW = charH * charAR;
+
+        const charX = W * 0.5 + W * charOffX - charW / 2;
+        const charY = H - charH + H * charOffY;
+
+        ctx.drawImage(layers.character, charX, charY, charW, charH);
+      }
+
+      // === 图层4: Logo ===
+      if (layers.logo) {
+        const logoScale = parseFloat(document.getElementById('logoScale').value);
+        const logoH = H * logoScale;
+        const logoAR = layers.logo.width / layers.logo.height;
+        const logoW = logoH * logoAR;
+        const logoX = (W - logoW) / 2;
+        const logoY = H * 0.03;
+        ctx.drawImage(layers.logo, logoX, logoY, logoW, logoH);
+      }
+
+      // === 图层5: 文案 ===
+      const topText = document.getElementById('topText').value;
+      const mainTitle = document.getElementById('mainTitle').value;
+      const subTitle = document.getElementById('subTitle').value;
+
+      const baseSize = Math.min(W, H) / 20;
+
+      if (topText) {
+        ctx.save();
+        ctx.font = `bold ${Math.round(baseSize * 0.7)}px "PingFang SC","Microsoft YaHei",sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 8;
+        const topY = layers.logo ? H * 0.03 + H * parseFloat(document.getElementById('logoScale').value) + baseSize * 0.3 : H * 0.05;
+        ctx.fillText(topText, W / 2, topY);
+        ctx.restore();
+      }
+
+      if (mainTitle) {
+        ctx.save();
+        const titleSize = Math.round(baseSize * 1.5);
+        ctx.font = `900 ${titleSize}px "PingFang SC","Microsoft YaHei",sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        // 描边
+        ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+        ctx.lineWidth = titleSize * 0.06;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(mainTitle, W / 2, H * 0.88);
+        // 填充
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur = 12;
+        ctx.fillText(mainTitle, W / 2, H * 0.88);
+        ctx.restore();
+      }
+
+      if (subTitle) {
+        ctx.save();
+        const subSize = Math.round(baseSize * 0.75);
+        // 卷轴横幅效果
+        const bannerH = subSize * 2.2;
+        const cy = H * 0.92;
+
+        // 横幅背景
+        const bgGrad = ctx.createLinearGradient(0, 0, W, 0);
+        bgGrad.addColorStop(0, 'rgba(20,8,0,0)');
+        bgGrad.addColorStop(0.06, 'rgba(20,8,0,0.82)');
+        bgGrad.addColorStop(0.94, 'rgba(20,8,0,0.82)');
+        bgGrad.addColorStop(1, 'rgba(20,8,0,0)');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, cy - bannerH / 2, W, bannerH);
+
+        // 上下金线
+        const lineGrad = ctx.createLinearGradient(0, 0, W, 0);
+        lineGrad.addColorStop(0, 'rgba(200,134,10,0)');
+        lineGrad.addColorStop(0.06, 'rgba(200,134,10,0.9)');
+        lineGrad.addColorStop(0.94, 'rgba(200,134,10,0.9)');
+        lineGrad.addColorStop(1, 'rgba(200,134,10,0)');
+        ctx.strokeStyle = lineGrad;
+        ctx.lineWidth = Math.max(1.5, baseSize * 0.05);
+        ctx.beginPath(); ctx.moveTo(0, cy - bannerH / 2); ctx.lineTo(W, cy - bannerH / 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, cy + bannerH / 2); ctx.lineTo(W, cy + bannerH / 2); ctx.stroke();
+
+        // 文字
+        ctx.font = `${subSize}px "PingFang SC","STFangsong","Microsoft YaHei",sans-serif`;
+        ctx.fillStyle = '#e8c96a';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 6;
+        ctx.fillText(subTitle, W / 2, cy);
+        ctx.restore();
+      }
+
+      // 更新文案状态
+      updateLayerStatus();
+    }
+
+    // Cover模式绘制
+    function drawCover(ctx, img, x, y, w, h) {
+      const imgAR = img.width / img.height;
+      const canvasAR = w / h;
+      let sx, sy, sw, sh;
+      if (imgAR > canvasAR) {
+        sh = img.height; sw = sh * canvasAR;
+        sx = (img.width - sw) / 2; sy = 0;
+      } else {
+        sw = img.width; sh = sw / canvasAR;
+        sx = 0; sy = (img.height - sh) / 2;
+      }
+      ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+    }
+
+    // ============ 输出格式选择 ============
+    function updateFormatStyle(checkbox) {
+      const option = checkbox.closest('.format-option');
+      if (checkbox.checked) option.classList.add('selected');
+      else option.classList.remove('selected');
+      const checked = document.querySelectorAll('.format-option input:checked');
+      if (checked.length === 0) {
+        checkbox.checked = true;
+        option.classList.add('selected');
+      }
+    }
+
+    // ============ 下载 ============
+    function downloadResult(format) {
+      const canvas = document.getElementById('previewCanvas');
+      if (!canvas.width || !layers.kv) {
+        alert('请先上传主KV并预览！');
+        return;
+      }
+      const spec = SPECS[currentSpec];
+
+      if (format === 'psd') {
+        // PSD 分层导出
+        try {
+          agPsd.initializeCanvas((width, height) => {
+            const c = document.createElement('canvas');
+            c.width = width;
+            c.height = height;
+            return c;
+          });
+
+          const W = spec.w, H = spec.h;
+          const psdDoc = { width: W, height: H, children: [] };
+
+          // 图层1: 背景KV
+          const bgCanvas = document.createElement('canvas');
+          bgCanvas.width = W; bgCanvas.height = H;
+          const bgCtx = bgCanvas.getContext('2d');
+          const blurVal = parseInt(document.getElementById('bgBlur').value) || 0;
+          const darkenVal = parseFloat(document.getElementById('bgDarken').value) || 0;
+          if (blurVal > 0) bgCtx.filter = `blur(${blurVal}px)`;
+          drawCover(bgCtx, layers.kv, 0, 0, W, H);
+          bgCtx.filter = 'none';
+          if (darkenVal > 0) { bgCtx.fillStyle = `rgba(0,0,0,${darkenVal})`; bgCtx.fillRect(0, 0, W, H); }
+          psdDoc.children.push({ name: '背景 - KV', canvas: bgCanvas, top: 0, left: 0, blendMode: 'normal', opacity: 1 });
+
+          // 图层2: 实机截图+边框
+          if (layers.screenshot) {
+            const ssCanvas = document.createElement('canvas');
+            ssCanvas.width = W; ssCanvas.height = H;
+            const ssCtx = ssCanvas.getContext('2d');
+            const ssScale = parseFloat(document.getElementById('ssScale').value);
+            const ssOffX = parseFloat(document.getElementById('ssOffsetX').value);
+            const ssOffY = parseFloat(document.getElementById('ssOffsetY').value);
+            const ssW = W * ssScale;
+            const ssAR = layers.screenshot.width / layers.screenshot.height;
+            const ssH = ssW / ssAR;
+            const ssX = W * 0.5 + W * ssOffX - ssW / 2;
+            const ssY = H * 0.5 + H * ssOffY - ssH / 2;
+            const radius = Math.min(ssW, ssH) * 0.02;
+            ssCtx.save();
+            ssCtx.beginPath(); ssCtx.roundRect(ssX, ssY, ssW, ssH, radius); ssCtx.clip();
+            ssCtx.drawImage(layers.screenshot, ssX, ssY, ssW, ssH);
+            ssCtx.restore();
+            if (currentFrameStyle !== 'none' && currentFrameStyle !== 'custom') {
+              drawBuiltinFrame(ssCtx, ssX, ssY, ssW, ssH, currentFrameStyle);
+            } else if (currentFrameStyle === 'custom' && layers.frame) {
+              const pad = Math.min(ssW, ssH) * 0.04;
+              ssCtx.drawImage(layers.frame, ssX - pad, ssY - pad, ssW + pad * 2, ssH + pad * 2);
+            }
+            psdDoc.children.push({ name: '实机截图 + 边框', canvas: ssCanvas, top: 0, left: 0, blendMode: 'normal', opacity: 1 });
+          }
+
+          // 图层3: 人物立绘
+          if (layers.character) {
+            const charCanvas = document.createElement('canvas');
+            charCanvas.width = W; charCanvas.height = H;
+            const charCtx = charCanvas.getContext('2d');
+            const charScale = parseFloat(document.getElementById('charScale').value);
+            const charOffX = parseFloat(document.getElementById('charOffsetX').value);
+            const charOffY = parseFloat(document.getElementById('charOffsetY').value);
+            const charH = H * charScale;
+            const charAR = layers.character.width / layers.character.height;
+            const charW = charH * charAR;
+            const charX = W * 0.5 + W * charOffX - charW / 2;
+            const charY = H - charH + H * charOffY;
+            charCtx.drawImage(layers.character, charX, charY, charW, charH);
+            psdDoc.children.push({ name: '人物立绘', canvas: charCanvas, top: 0, left: 0, blendMode: 'normal', opacity: 1 });
+          }
+
+          // 图层4: Logo
+          if (layers.logo) {
+            const logoCanvas = document.createElement('canvas');
+            logoCanvas.width = W; logoCanvas.height = H;
+            const logoCtx = logoCanvas.getContext('2d');
+            const logoScale = parseFloat(document.getElementById('logoScale').value);
+            const logoH = H * logoScale;
+            const logoAR = layers.logo.width / layers.logo.height;
+            const logoW = logoH * logoAR;
+            const logoX = (W - logoW) / 2;
+            const logoY = H * 0.03;
+            logoCtx.drawImage(layers.logo, logoX, logoY, logoW, logoH);
+            psdDoc.children.push({ name: 'Logo', canvas: logoCanvas, top: 0, left: 0, blendMode: 'normal', opacity: 1 });
+          }
+
+          // 图层5: 文案
+          const topText = document.getElementById('topText').value;
+          const mainTitle = document.getElementById('mainTitle').value;
+          const subTitle = document.getElementById('subTitle').value;
+          if (topText || mainTitle || subTitle) {
+            const textCanvas = document.createElement('canvas');
+            textCanvas.width = W; textCanvas.height = H;
+            const textCtx = textCanvas.getContext('2d');
+            // 复用预览中的文案绘制逻辑
+            const baseSize = Math.min(W, H) / 20;
+            if (topText) {
+              textCtx.save();
+              textCtx.font = `bold ${Math.round(baseSize * 0.7)}px "PingFang SC","Microsoft YaHei",sans-serif`;
+              textCtx.textAlign = 'center'; textCtx.textBaseline = 'top';
+              textCtx.fillStyle = 'rgba(255,255,255,0.9)';
+              textCtx.shadowColor = 'rgba(0,0,0,0.5)'; textCtx.shadowBlur = 8;
+              const topY = layers.logo ? H * 0.03 + H * parseFloat(document.getElementById('logoScale').value) + baseSize * 0.3 : H * 0.05;
+              textCtx.fillText(topText, W / 2, topY);
+              textCtx.restore();
+            }
+            if (mainTitle) {
+              textCtx.save();
+              const titleSize = Math.round(baseSize * 1.5);
+              textCtx.font = `900 ${titleSize}px "PingFang SC","Microsoft YaHei",sans-serif`;
+              textCtx.textAlign = 'center'; textCtx.textBaseline = 'bottom';
+              textCtx.strokeStyle = 'rgba(0,0,0,0.7)'; textCtx.lineWidth = titleSize * 0.06; textCtx.lineJoin = 'round';
+              textCtx.strokeText(mainTitle, W / 2, H * 0.88);
+              textCtx.fillStyle = '#ffffff'; textCtx.shadowColor = 'rgba(0,0,0,0.6)'; textCtx.shadowBlur = 12;
+              textCtx.fillText(mainTitle, W / 2, H * 0.88);
+              textCtx.restore();
+            }
+            if (subTitle) {
+              textCtx.save();
+              const subSize = Math.round(baseSize * 0.75);
+              const bannerH = subSize * 2.2;
+              const cy = H * 0.92;
+              const bgGrad = textCtx.createLinearGradient(0, 0, W, 0);
+              bgGrad.addColorStop(0, 'rgba(20,8,0,0)'); bgGrad.addColorStop(0.06, 'rgba(20,8,0,0.82)');
+              bgGrad.addColorStop(0.94, 'rgba(20,8,0,0.82)'); bgGrad.addColorStop(1, 'rgba(20,8,0,0)');
+              textCtx.fillStyle = bgGrad;
+              textCtx.fillRect(0, cy - bannerH / 2, W, bannerH);
+              const lineGrad = textCtx.createLinearGradient(0, 0, W, 0);
+              lineGrad.addColorStop(0, 'rgba(200,134,10,0)'); lineGrad.addColorStop(0.06, 'rgba(200,134,10,0.9)');
+              lineGrad.addColorStop(0.94, 'rgba(200,134,10,0.9)'); lineGrad.addColorStop(1, 'rgba(200,134,10,0)');
+              textCtx.strokeStyle = lineGrad; textCtx.lineWidth = Math.max(1.5, baseSize * 0.05);
+              textCtx.beginPath(); textCtx.moveTo(0, cy - bannerH / 2); textCtx.lineTo(W, cy - bannerH / 2); textCtx.stroke();
+              textCtx.beginPath(); textCtx.moveTo(0, cy + bannerH / 2); textCtx.lineTo(W, cy + bannerH / 2); textCtx.stroke();
+              textCtx.font = `${subSize}px "PingFang SC","STFangsong","Microsoft YaHei",sans-serif`;
+              textCtx.fillStyle = '#e8c96a'; textCtx.textAlign = 'center'; textCtx.textBaseline = 'middle';
+              textCtx.shadowColor = 'rgba(0,0,0,0.5)'; textCtx.shadowBlur = 6;
+              textCtx.fillText(subTitle, W / 2, cy);
+              textCtx.restore();
+            }
+            psdDoc.children.push({ name: '文案', canvas: textCanvas, top: 0, left: 0, blendMode: 'normal', opacity: 1 });
+          }
+
+          const psdBuffer = agPsd.writePsd(psdDoc);
+          const blob = new Blob([psdBuffer], { type: 'application/octet-stream' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = `卖点图_${spec.name}_${spec.w}x${spec.h}.psd`;
+          a.click();
+        } catch(err) {
+          console.error('PSD 导出失败:', err);
+          alert(`PSD 导出失败: ${err.message}\n将自动改为 PNG 下载`);
+          downloadResult('png');
+        }
+      } else {
+        const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+        const quality = format === 'jpg' ? 0.92 : undefined;
+        canvas.toBlob(blob => {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = `卖点图_${spec.name}_${spec.w}x${spec.h}.${format}`;
+          a.click();
+        }, mime, quality);
+      }
+    }
+
+    function downloadSelected() {
+      const formats = Array.from(document.querySelectorAll('.format-option input:checked')).map(cb => cb.value);
+      if (formats.length === 0) { alert('请至少选择一种输出格式！'); return; }
+      formats.forEach((format, i) => {
+        setTimeout(() => downloadResult(format), i * 200);
+      });
+    }
+
+    // ============ 文案输入监听 ============
+    ['topText', 'mainTitle', 'subTitle'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => {
+        updateLayerStatus();
+        livePreview();
+      });
+    });
+
+    // 初始状态
+    updateLayerStatus();
+  </script>
+</body>
+</html>

@@ -20,6 +20,9 @@ app.get('/', (req, res) => {
 app.get('/kv-tool.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'kv-tool.html'));
 });
+app.get('/material-composer.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'material-composer.html'));
+});
 app.get('/video-composer.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'video-composer.html'));
 });

@@ -3,3 +3,5 @@ uploads/
 outputs/
 *.log
 .DS_Store
+
+.vercel

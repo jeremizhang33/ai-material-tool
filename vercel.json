@@ -16,6 +16,10 @@
       "dest": "app.js"
     },
     {
+      "src": "/material-composer.html",
+      "dest": "app.js"
+    },
+    {
       "src": "/video-composer.html",
       "dest": "app.js"
     },
